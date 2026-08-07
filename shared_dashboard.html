@@ -159,7 +159,7 @@
   .outlook-card.red{background:var(--red-bg); color:var(--red); border-color:var(--red);}
   .outlook-card p{margin:0; color:var(--text);}
 
-  /* 觀看者手動切換主題時，必須蓋過 prefers-color-scheme */
+  /* 手動切換主題時必須蓋過 prefers-color-scheme */
   :root[data-theme="dark"]{
     --bg:#111417; --card:#1b1f24; --text:#e8e9ec; --sub:#9aa1ad; --border:#2b2f37;
     --green:#4caf6a; --green-bg:#123420;
@@ -184,11 +184,17 @@
     --blob-red: rgba(198,40,40,0.14);
     --grain-opacity: 0.05;
 }
-  /* 數字欄位對齊 */
   td, .card .num{ font-variant-numeric: tabular-nums; }
+  .theme-toggle{
+    background:var(--card); color:var(--text); border:1px solid var(--border);
+    border-radius:8px; padding:6px 10px; font-size:0.9rem; cursor:pointer; line-height:1;
+    transition:border-color .15s ease;
+  }
+  .theme-toggle:hover{ border-color:var(--accent); }
+  .theme-toggle:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
   @media (prefers-reduced-motion: reduce){
-    body::before{ animation: none; }
-    *{ transition: none !important; }
+    body::before{ animation:none; }
+    *{ transition:none !important; }
   }
 </style>
 
@@ -258,7 +264,7 @@
     <ul class="conflict-list" id="conflictZone"></ul>
   </section>
 
-  <footer>本頁為某一次掃描結果的靜態快照，不會自動更新；資料來源皆為公開市場數據。本頁內容僅供參考，不構成投資建議。</footer>
+  <footer>本頁每個交易日自動更新（台北時間約 09:25）。資料來源皆為公開市場數據，內容僅供參考，不構成投資建議。</footer>
 </div>
 
 <!--
@@ -714,9 +720,9 @@ function renderStaleness(dayIndex){
   if (diffDays <= 0){
     note.innerHTML = `<span class="stale-ok">● 資料為最新（今天）</span>`;
   } else if (diffDays <= 3){
-    note.innerHTML = `<span class="stale-warn">● 這份快照的資料為 ${diffDays} 天前</span>`;
+    note.innerHTML = `<span class="stale-warn">● 最新資料為 ${diffDays} 天前（如遇連假屬正常）</span>`;
   } else {
-    note.innerHTML = `<span class="stale-bad">● 這份快照的資料為 ${diffDays} 天前，僅供參考</span>`;
+    note.innerHTML = `<span class="stale-bad">● 最新資料為 ${diffDays} 天前（可能遇到假日或更新中斷）</span>`;
   }
 }
 

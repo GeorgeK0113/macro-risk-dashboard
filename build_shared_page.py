@@ -1,38 +1,37 @@
 # -*- coding: utf-8 -*-
 """
-把本機 dashboard.html 轉成可分享的網頁版 (shared_dashboard.html)。
+從本機 dashboard.html 產生兩個對外版本：
 
-差異只有四點，資料與判斷邏輯完全不動：
-  1. 去掉 <!DOCTYPE>/<html>/<head>/<body> 外殼（發布平台會自己包）
-  2. 補上 :root[data-theme=...] 覆寫，讓觀看者的深/淺色切換鈕真的有效
-  3. 數字欄位加上等寬對齊 (tabular-nums)
-  4. 把「請檢查排程/手動執行腳本」這類只有你能做的提示，改成給朋友看的說法
+  1. shared_dashboard.html          → 給 Claude Artifact 用（平台會自己包外殼，所以要去掉 doctype/html/head/body）
+  2. .worktree-gh-pages/index.html  → 給 GitHub Pages 用（必須是完整可獨立開啟的網頁）
+
+兩者的資料與判斷邏輯完全相同，只差在外殼與少數對外文案。
 
 用法： python build_shared_page.py
 """
 import re
 import sys
-import io
 from pathlib import Path
 
 BASE = Path(__file__).resolve().parent
 SRC = BASE / "dashboard.html"
-OUT = BASE / "shared_dashboard.html"
+OUT_ARTIFACT = BASE / "shared_dashboard.html"
+OUT_PAGES = BASE / ".worktree-gh-pages" / "index.html"
 
 html = SRC.read_text(encoding="utf-8")
 
-# --- 1. 抽出 <style>、<body> 內容與兩個 script 區塊 -------------------------
-style = re.search(r"<style>(.*?)</style>", html, re.S)
-body = re.search(r"<body>(.*?)</body>", html, re.S)
-if not style or not body:
+style_m = re.search(r"<style>(.*?)</style>", html, re.S)
+body_m = re.search(r"<body>(.*?)</body>", html, re.S)
+if not style_m or not body_m:
     sys.exit("找不到 <style> 或 <body>，dashboard.html 結構可能被改過")
 
-style_css = style.group(1)
-body_html = body.group(1)
+style_css = style_m.group(1)
+body_html = body_m.group(1)
 
-# --- 2. 深/淺色主題 token 覆寫 --------------------------------------------
-# 觀看者按主題切換鈕時，平台會在根元素蓋上 data-theme，必須比 media query 更強勢
-dark_tokens = """
+# ---------------------------------------------------------------------------
+# 1. 對外共用的樣式補強
+# ---------------------------------------------------------------------------
+DARK_TOKENS = """
     --bg:#111417; --card:#1b1f24; --text:#e8e9ec; --sub:#9aa1ad; --border:#2b2f37;
     --green:#4caf6a; --green-bg:#123420;
     --yellow:#e0b33d; --yellow-bg:#3a2f10;
@@ -44,7 +43,7 @@ dark_tokens = """
     --blob-red: rgba(224,96,93,0.13);
     --grain-opacity: 0.08;
 """
-light_tokens = """
+LIGHT_TOKENS = """
     --bg:#eef1f0; --card:#fffdf8; --text:#1a1d23; --sub:#5b6270; --border:#e3e1d8;
     --green:#1e8e3e; --green-bg:#e6f4ea;
     --yellow:#a5690a; --yellow-bg:#fff3d6;
@@ -58,50 +57,141 @@ light_tokens = """
 """
 
 style_css += f"""
-  /* 觀看者手動切換主題時，必須蓋過 prefers-color-scheme */
-  :root[data-theme="dark"]{{{dark_tokens}}}
-  :root[data-theme="light"]{{{light_tokens}}}
-  /* 數字欄位對齊 */
+  /* 手動切換主題時必須蓋過 prefers-color-scheme */
+  :root[data-theme="dark"]{{{DARK_TOKENS}}}
+  :root[data-theme="light"]{{{LIGHT_TOKENS}}}
   td, .card .num{{ font-variant-numeric: tabular-nums; }}
+  .theme-toggle{{
+    background:var(--card); color:var(--text); border:1px solid var(--border);
+    border-radius:8px; padding:6px 10px; font-size:0.9rem; cursor:pointer; line-height:1;
+    transition:border-color .15s ease;
+  }}
+  .theme-toggle:hover{{ border-color:var(--accent); }}
+  .theme-toggle:focus-visible{{ outline:2px solid var(--accent); outline-offset:2px; }}
   @media (prefers-reduced-motion: reduce){{
-    body::before{{ animation: none; }}
-    *{{ transition: none !important; }}
+    body::before{{ animation:none; }}
+    *{{ transition:none !important; }}
   }}
 """
 
-# --- 3. 改寫只有本機擁有者能執行的提示文字 --------------------------------
+# ---------------------------------------------------------------------------
+# 2. 對外文案：拿掉只有本機擁有者才做得到的指示
+# ---------------------------------------------------------------------------
 body_html = body_html.replace(
     "本頁為本機審查用儀表板，資料不會上傳。每日排程掃描完成後將新增一筆記錄至下拉選單以便比對。",
-    "本頁為某一次掃描結果的靜態快照，不會自動更新；資料來源皆為公開市場數據。"
-    "本頁內容僅供參考，不構成投資建議。",
+    "本頁每個交易日自動更新（台北時間約 09:25）。資料來源皆為公開市場數據，"
+    "內容僅供參考，不構成投資建議。",
 )
-
-# staleness 提示：朋友看不到你的 log、也不能執行你的腳本
 body_html = body_html.replace(
     '● 最新資料已經 ${diffDays} 天沒更新！排程可能失敗，請檢查 logs/run_history.log 或手動執行 run_daily_scan.ps1',
-    '● 這份快照的資料為 ${diffDays} 天前，僅供參考',
+    '● 最新資料為 ${diffDays} 天前（可能遇到假日或更新中斷）',
 )
 body_html = body_html.replace(
     '● 最新資料為 ${diffDays} 天前（如遇連假屬正常，超過3天請檢查排程）',
-    '● 這份快照的資料為 ${diffDays} 天前',
+    '● 最新資料為 ${diffDays} 天前（如遇連假屬正常）',
 )
 
-# --- 4. 組出發布用檔案（不含 doctype/html/head/body） ----------------------
-out = f"<title>宏觀風險掃描儀表板</title>\n<style>{style_css}</style>\n{body_html}"
+# ---------------------------------------------------------------------------
+# 3. Artifact 版：不含外殼
+# ---------------------------------------------------------------------------
+artifact_out = (
+    "<title>宏觀風險掃描儀表板</title>\n"
+    f"<style>{style_css}</style>\n"
+    f"{body_html}"
+)
+OUT_ARTIFACT.write_text(artifact_out, encoding="utf-8")
 
-OUT.write_text(out, encoding="utf-8")
+# ---------------------------------------------------------------------------
+# 4. GitHub Pages 版：完整獨立網頁 + 主題切換鈕
+# ---------------------------------------------------------------------------
+# GitHub Pages 沒有平台級的主題切換，必須自己給一顆按鈕，data-theme 的樣式才有意義
+pages_body = body_html.replace(
+    '<span class="meta" id="staleNote"></span>',
+    '<span class="meta" id="staleNote"></span>\n'
+    '      <button type="button" class="theme-toggle" id="themeToggle" '
+    'title="切換深色／淺色" aria-label="切換深色／淺色">🌓</button>',
+)
 
-# --- 5. 基本自我檢查 -------------------------------------------------------
+theme_script = """
+<script>
+(function(){
+  var root = document.documentElement;
+  var btn = document.getElementById("themeToggle");
+  function current(){
+    return root.getAttribute("data-theme") ||
+      (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  }
+  function apply(mode){
+    root.setAttribute("data-theme", mode);
+    btn.textContent = mode === "dark" ? "☀️" : "🌙";
+    try { localStorage.setItem("macroRiskTheme", mode); } catch (e) {}
+  }
+  try {
+    var saved = localStorage.getItem("macroRiskTheme");
+    if (saved) { apply(saved); } else { btn.textContent = current() === "dark" ? "☀️" : "🌙"; }
+  } catch (e) { btn.textContent = "🌙"; }
+  btn.addEventListener("click", function(){
+    apply(current() === "dark" ? "light" : "dark");
+  });
+})();
+</script>
+"""
+
+pages_out = f"""<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>宏觀風險掃描儀表板</title>
+<meta name="description" content="17項美股宏觀風險指標每日掃描，含短中長期白話解讀與賣出觸發追蹤。僅供參考，不構成投資建議。">
+<meta property="og:title" content="宏觀風險掃描儀表板">
+<meta property="og:description" content="17項美股宏觀風險指標每日掃描，含短中長期白話解讀與賣出觸發追蹤。">
+<meta property="og:type" content="website">
+<style>{style_css}</style>
+</head>
+<body>
+{pages_body}
+{theme_script}
+</body>
+</html>
+"""
+
+if OUT_PAGES.parent.exists():
+    OUT_PAGES.write_text(pages_out, encoding="utf-8")
+    pages_status = f"已寫入 {OUT_PAGES.relative_to(BASE)} ({len(pages_out):,} 字元)"
+else:
+    pages_status = "略過 GitHub Pages 版（.worktree-gh-pages 尚未建立）"
+
+# ---------------------------------------------------------------------------
+# 5. 自我檢查
+# ---------------------------------------------------------------------------
 problems = []
-for tag in ("<!DOCTYPE", "<html", "<head>", "<body>"):
-    if tag.lower() in out.lower():
-        problems.append(f"殘留外殼標籤 {tag}")
-if out.count("<script") != out.count("</script>"):
-    problems.append("script 標籤數量不成對")
-if "history-data" not in out:
-    problems.append("找不到 history-data 資料區塊")
 
-print(f"已產生 {OUT.name} ({len(out):,} 字元)")
+for tag in ("<!doctype", "<html", "<head>", "<body>"):
+    if tag in artifact_out.lower():
+        problems.append(f"Artifact 版殘留外殼標籤 {tag}")
+
+if artifact_out.count("<script") != artifact_out.count("</script>"):
+    problems.append("Artifact 版 script 標籤不成對")
+if pages_out.count("<script") != pages_out.count("</script>"):
+    problems.append("Pages 版 script 標籤不成對")
+
+for name, blob in (("Artifact", artifact_out), ("Pages", pages_out)):
+    if "history-data" not in blob:
+        problems.append(f"{name} 版找不到 history-data 資料區塊")
+    m = re.search(r'<script type="application/json" id="history-data">(.*?)</script>', blob, re.S)
+    if m:
+        import json
+        try:
+            json.loads(m.group(1))
+        except Exception as e:
+            problems.append(f"{name} 版 JSON 無法解析：{e}")
+
+if 'id="themeToggle"' not in pages_out:
+    problems.append("Pages 版缺少主題切換鈕")
+
+print(f"已寫入 {OUT_ARTIFACT.name} ({len(artifact_out):,} 字元)")
+print(pages_status)
 if problems:
     print("⚠️ 檢查發現問題：")
     for p in problems:

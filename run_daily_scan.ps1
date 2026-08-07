@@ -50,5 +50,41 @@ if ($stale.Count -eq 0) {
     $status = "FAILED(" + ($stale -join ",") + ")"
 }
 
-$line = "$stamp  exit=$exitCode  status=$status  log=$logFile"
+# 只有掃描確實更新了檔案，才發布到 GitHub Pages；
+# 否則會把舊資料重推一次，讓線上頁面看起來「有更新」而其實沒有。
+$publish = "SKIPPED"
+if ($status -eq "OK") {
+    try {
+        $py = "C:\Users\George\AppData\Local\Programs\Python\Python311\python.exe"
+        if (-not (Test-Path $py)) { $py = "python" }
+        & $py (Join-Path $dir "build_shared_page.py") *>> $logFile
+        if ($LASTEXITCODE -ne 0) { throw "build_shared_page.py 失敗 (exit $LASTEXITCODE)" }
+
+        $wt = Join-Path $dir ".worktree-gh-pages"
+        if (-not (Test-Path (Join-Path $wt "index.html"))) { throw "index.html 未產生" }
+
+        Push-Location $wt
+        try {
+            git add index.html *>> $logFile
+            $dirty = git status --porcelain
+            if ([string]::IsNullOrWhiteSpace($dirty)) {
+                $publish = "NO_CHANGE"
+            } else {
+                # 沿用每日 amend 策略：歷史只保留一筆，repo 不會隨天數膨脹
+                git -c user.name="GeorgeK0113" -c user.email="okwong0113@gmail.com" `
+                    commit --amend -q -m "Dashboard update $($today -replace '-','')" *>> $logFile
+                git push -f origin gh-pages *>> $logFile
+                if ($LASTEXITCODE -ne 0) { throw "git push 失敗 (exit $LASTEXITCODE)" }
+                $publish = "PUSHED"
+            }
+        } finally {
+            Pop-Location
+        }
+    } catch {
+        $publish = "FAILED($($_.Exception.Message))"
+        Add-Content -Path $logFile -Encoding utf8 -Value "PUBLISH ERROR: $($_.Exception.Message)"
+    }
+}
+
+$line = "$stamp  exit=$exitCode  status=$status  publish=$publish  log=$logFile"
 Add-Content -Path (Join-Path $dir "logs\run_history.log") -Encoding utf8 -Value $line
