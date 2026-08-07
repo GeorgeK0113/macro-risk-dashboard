@@ -1,0 +1,2376 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>宏觀風險掃描儀表板</title>
+<meta name="description" content="17項美股宏觀風險指標每日掃描，含短中長期白話解讀與賣出觸發追蹤。僅供參考，不構成投資建議。">
+<meta property="og:title" content="宏觀風險掃描儀表板">
+<meta property="og:description" content="17項美股宏觀風險指標每日掃描，含短中長期白話解讀與賣出觸發追蹤。">
+<meta property="og:type" content="website">
+<style>
+  :root{
+    --bg:#eef1f0; --card:#fffdf8; --text:#1a1d23; --sub:#5b6270; --border:#e3e1d8;
+    --green:#1e8e3e; --green-bg:#e6f4ea;
+    --yellow:#a5690a; --yellow-bg:#fff3d6;
+    --red:#c62828; --red-bg:#fdecea;
+    --accent:#c25a1e;
+    --grid-line: rgba(60,55,45,0.06);
+    --blob-green: rgba(30,142,62,0.16);
+    --blob-yellow: rgba(214,150,20,0.18);
+    --blob-red: rgba(198,40,40,0.14);
+    --grain-opacity: 0.05;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#111417; --card:#1b1f24; --text:#e8e9ec; --sub:#9aa1ad; --border:#2b2f37;
+      --green:#4caf6a; --green-bg:#123420;
+      --yellow:#e0b33d; --yellow-bg:#3a2f10;
+      --red:#e0605d; --red-bg:#3a1616;
+      --accent:#e8873f;
+      --grid-line: rgba(255,255,255,0.045);
+      --blob-green: rgba(76,175,106,0.14);
+      --blob-yellow: rgba(224,179,61,0.13);
+      --blob-red: rgba(224,96,93,0.13);
+      --grain-opacity: 0.08;
+    }
+  }
+  *{box-sizing:border-box;}
+  html{background:var(--bg);}
+  body{
+    margin:0; color:var(--text); position:relative; isolation:isolate;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC",Roboto,sans-serif;
+    line-height:1.55; padding:24px 16px 60px; overflow-x:hidden;
+    background:
+      repeating-linear-gradient(0deg, var(--grid-line) 0px, transparent 1px, transparent 28px),
+      repeating-linear-gradient(90deg, var(--grid-line) 0px, transparent 1px, transparent 28px),
+      var(--bg);
+  }
+  body::before{
+    content:""; position:fixed; inset:-10%; z-index:-2; pointer-events:none;
+    background-image:
+      radial-gradient(38vw 38vw at 8% 12%, var(--blob-yellow), transparent 60%),
+      radial-gradient(42vw 42vw at 92% 8%, var(--blob-red), transparent 62%),
+      radial-gradient(46vw 46vw at 50% 105%, var(--blob-green), transparent 65%);
+    filter:blur(60px);
+    animation: driftBlobs 36s ease-in-out infinite alternate;
+  }
+  body::after{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    opacity:var(--grain-opacity); mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+  @keyframes driftBlobs{
+    0%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(1.5%,-2%) scale(1.04); }
+    100%{ transform:translate(-1.5%,1.5%) scale(0.98); }
+  }
+  .wrap{max-width:1080px; margin:0 auto;}
+  header{margin-bottom:24px;}
+  h1{
+    font-size:1.55rem; margin:0 0 4px; letter-spacing:-.01em;
+    font-family:ui-monospace,"Cascadia Code","SF Mono",Consolas,"Noto Sans TC",monospace;
+  }
+  .datepick{display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap;}
+  select{
+    background:var(--card); color:var(--text); border:1px solid var(--border);
+    border-radius:8px; padding:6px 10px; font-size:0.9rem; cursor:pointer;
+    transition:border-color .15s ease;
+  }
+  select:hover{border-color:var(--accent);}
+  .meta{color:var(--sub); font-size:0.85rem;}
+  .stale-ok{color:var(--green);}
+  .stale-warn{color:var(--yellow); font-weight:600;}
+  .stale-bad{color:var(--red); font-weight:700;}
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin:20px 0;}
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px;
+    box-shadow:0 1px 2px rgba(20,15,5,0.04);
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+  .card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 10px 24px rgba(20,15,5,0.10);
+    border-color:var(--accent);
+  }
+  .card .num{
+    font-size:1.6rem; font-weight:700;
+    font-family:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
+  }
+  .card .lbl{color:var(--sub); font-size:0.8rem; margin-bottom:4px;}
+  section{margin:32px 0;}
+  h2{
+    font-size:1.1rem; border-left:4px solid var(--accent); padding-left:10px; margin-bottom:12px;
+    font-family:ui-monospace,"Cascadia Code","SF Mono",Consolas,"Noto Sans TC",monospace;
+  }
+  h3{font-size:0.95rem; color:var(--sub); margin:18px 0 8px;}
+  table{
+    width:100%; border-collapse:collapse; background:var(--card); border-radius:10px;
+    overflow:hidden; border:1px solid var(--border); box-shadow:0 1px 2px rgba(20,15,5,0.04);
+  }
+  th,td{padding:9px 12px; text-align:left; font-size:0.87rem; border-bottom:1px solid var(--border);}
+  th{background:rgba(128,128,128,0.08); color:var(--sub); font-weight:600; font-size:0.78rem; text-transform:uppercase; letter-spacing:.03em;}
+  tr:last-child td{border-bottom:none;}
+  .tablewrap{overflow-x:auto;}
+  .badge{display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-size:0.78rem; font-weight:600;}
+  .badge.green{background:var(--green-bg); color:var(--green);}
+  .badge.yellow{background:var(--yellow-bg); color:var(--yellow);}
+  .badge.red{background:var(--red-bg); color:var(--red);}
+  .dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
+  .dot.green{background:var(--green);} .dot.yellow{background:var(--yellow);} .dot.red{background:var(--red);}
+  .arrow{font-weight:700;}
+  .arrow.bad{color:var(--red);}
+  .arrow.good{color:var(--green);}
+  .arrow.flat{color:var(--sub);}
+  .note{font-size:0.78rem; color:var(--sub);}
+  .trig-hit{color:var(--red); font-weight:700;}
+  .trig-warn{color:var(--yellow); font-weight:700;}
+  .trig-no{color:var(--sub);}
+  .summary-banner{
+    padding:14px 18px; border-radius:10px; margin-bottom:16px; font-size:0.95rem; font-weight:600;
+    background:var(--yellow-bg); color:var(--yellow); border:1px solid var(--yellow);
+  }
+  .summary-banner.ok{background:var(--green-bg); color:var(--green); border-color:var(--green);}
+  .summary-banner.alert{background:var(--red-bg); color:var(--red); border-color:var(--red);}
+  footer{color:var(--sub); font-size:0.78rem; margin-top:40px; text-align:center;}
+  .conflict-list{font-size:0.85rem; color:var(--sub);}
+  .conflict-list li{margin-bottom:4px;}
+  .fatal-error{
+    max-width:720px; margin:60px auto; padding:24px; border-radius:12px;
+    background:var(--red-bg); color:var(--red); border:1px solid var(--red);
+    font-family:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace; white-space:pre-wrap; font-size:0.85rem;
+  }
+  details.guide{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:4px 18px 16px; margin:18px 0;
+  }
+  details.guide summary{
+    cursor:pointer; font-weight:700; padding:14px 0; list-style:none; font-size:0.95rem;
+  }
+  details.guide summary::marker{ display:none; content:""; }
+  details.guide summary::-webkit-details-marker{display:none;}
+  details.guide summary::before{content:"▸ "; color:var(--accent);}
+  details.guide[open] summary::before{content:"▾ "; color:var(--accent);}
+  .guide-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; margin-top:6px;}
+  .guide-item{font-size:0.85rem; line-height:1.6;}
+  .guide-item b{display:block; margin-bottom:2px;}
+  .guide-legend{display:flex; gap:16px; flex-wrap:wrap; margin:10px 0; font-size:0.85rem;}
+  .guide-legend span{display:inline-flex; align-items:center; gap:5px;}
+  .outlook{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; margin:18px 0;
+  }
+  .outlook-card{
+    border-radius:12px; padding:16px; border:1px solid; font-size:0.88rem; line-height:1.6;
+  }
+  .outlook-card h4{margin:0 0 8px; font-size:0.95rem;}
+  .outlook-card.green{background:var(--green-bg); color:var(--green); border-color:var(--green);}
+  .outlook-card.yellow{background:var(--yellow-bg); color:var(--yellow); border-color:var(--yellow);}
+  .outlook-card.red{background:var(--red-bg); color:var(--red); border-color:var(--red);}
+  .outlook-card p{margin:0; color:var(--text);}
+
+  /* 手動切換主題時必須蓋過 prefers-color-scheme */
+  :root[data-theme="dark"]{
+    --bg:#111417; --card:#1b1f24; --text:#e8e9ec; --sub:#9aa1ad; --border:#2b2f37;
+    --green:#4caf6a; --green-bg:#123420;
+    --yellow:#e0b33d; --yellow-bg:#3a2f10;
+    --red:#e0605d; --red-bg:#3a1616;
+    --accent:#e8873f;
+    --grid-line: rgba(255,255,255,0.045);
+    --blob-green: rgba(76,175,106,0.14);
+    --blob-yellow: rgba(224,179,61,0.13);
+    --blob-red: rgba(224,96,93,0.13);
+    --grain-opacity: 0.08;
+}
+  :root[data-theme="light"]{
+    --bg:#eef1f0; --card:#fffdf8; --text:#1a1d23; --sub:#5b6270; --border:#e3e1d8;
+    --green:#1e8e3e; --green-bg:#e6f4ea;
+    --yellow:#a5690a; --yellow-bg:#fff3d6;
+    --red:#c62828; --red-bg:#fdecea;
+    --accent:#c25a1e;
+    --grid-line: rgba(60,55,45,0.06);
+    --blob-green: rgba(30,142,62,0.16);
+    --blob-yellow: rgba(214,150,20,0.18);
+    --blob-red: rgba(198,40,40,0.14);
+    --grain-opacity: 0.05;
+}
+  td, .card .num{ font-variant-numeric: tabular-nums; }
+  .theme-toggle{
+    background:var(--card); color:var(--text); border:1px solid var(--border);
+    border-radius:8px; padding:6px 10px; font-size:0.9rem; cursor:pointer; line-height:1;
+    transition:border-color .15s ease;
+  }
+  .theme-toggle:hover{ border-color:var(--accent); }
+  .theme-toggle:focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  @media (prefers-reduced-motion: reduce){
+    body::before{ animation:none; }
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header>
+    <h1>📊 宏觀風險每日掃描儀表板</h1>
+    <div class="meta">17項指標追蹤 · 資料來源：CBOE / FRED / AAII / NAAIM / FINRA / GuruFocus / Renaissance Capital / BofA / Conference Board</div>
+    <div class="datepick">
+      <label class="meta">掃描日期：</label>
+      <select id="dateSelect"></select>
+      <span class="meta" id="staleNote"></span>
+      <button type="button" class="theme-toggle" id="themeToggle" title="切換深色／淺色" aria-label="切換深色／淺色">🌓</button>
+    </div>
+  </header>
+
+  <details class="guide" id="guideBox">
+    <summary>📖 新手看這裡：怎麼看這份儀表板</summary>
+    <div class="guide-legend">
+      <span>🟢 綠燈：正常，不用理它</span>
+      <span>🟡 黃燈：稍微偏熱，觀察就好</span>
+      <span>🔴 紅燈：警戒，開始留意</span>
+      <span><span class="arrow bad">■</span> 紅色＝對你不利（風險上升）</span>
+      <span><span class="arrow good">■</span> 綠色＝對你有利（風險下降）</span>
+      <span><span class="arrow flat">－</span> 跟上次差不多／沒有前一筆可比</span>
+    </div>
+    <div class="guide-item" style="margin-bottom:10px;">
+      <b>⚠️ 顏色跟數字漲跌方向沒有直接關係！</b>每個指標「漲=好」還是「跌=好」不一樣（例如VIX漲=不好，但殖利率曲線漲=好），儀表板已經幫你把方向換算成統一的「紅=不利、綠=有利」，你只要看顏色，不用自己判斷這個數字漲跌各自代表什麼意思。
+    </div>
+    <div class="guide-grid">
+      <div class="guide-item"><b>🟢 短期指標（天－週）</b>抓的是「現在市場情緒會不會太興奮／太恐慌」，管的是未來1-3個月要不要先減碼或買保險，不代表長期一定會跌。</div>
+      <div class="guide-item"><b>🟡 中期指標（週－月）</b>抓的是「錢有沒有借太多、大家有沒有太瘋狂追股票」，管的是未來3-12個月的趨勢會不會轉彎。</div>
+      <div class="guide-item"><b>🔴 長期指標（月－年）</b>抓的是「股市現在的價格算不算貴」，管的是未來1-3年以上，跟長期該不該調整持股比例有關，不是用來預測明天漲跌。</div>
+      <div class="guide-item"><b>警戒閾值</b>是這個指標歷史上被驗證過的「危險線」，超過這條線不代表一定會跌，但代表過去類似情況出現後，下跌的機率通常比較高。</div>
+      <div class="guide-item"><b>賣出觸發表</b>是7條比較硬的規則，同時觸發到3條以上，才是真的建議開始分批賣出；只觸發1-2條，代表要提高警覺，但還不用真的動手。</div>
+      <div class="guide-item"><b>資料衝突／待核實</b>代表我找到的資料互相矛盾或抓不到，不是股市本身有問題，這種指標先不要拿來做決定。</div>
+    </div>
+  </details>
+
+  <div id="bannerZone"></div>
+
+  <div id="outlookZone"></div>
+
+  <div class="cards" id="cardZone"></div>
+
+  <section>
+    <h2>🟢 短期指標（天－週級別）</h2>
+    <div class="tablewrap"><table id="tblShort"></table></div>
+  </section>
+
+  <section>
+    <h2>🟡 中期指標（週－月級別）</h2>
+    <div class="tablewrap"><table id="tblMid"></table></div>
+  </section>
+
+  <section>
+    <h2>🔴 長期指標（月－年級別）</h2>
+    <div class="tablewrap"><table id="tblLong"></table></div>
+  </section>
+
+  <section>
+    <h2>🚨 賣出觸發狀態追蹤</h2>
+    <div class="tablewrap"><table id="tblTrig"></table></div>
+    <p id="trigSummary" class="meta"></p>
+  </section>
+
+  <section>
+    <h2>⚠️ 資料滯後 / 來源衝突</h2>
+    <ul class="conflict-list" id="conflictZone"></ul>
+  </section>
+
+  <footer>本頁每個交易日自動更新（台北時間約 09:25）。資料來源皆為公開市場數據，內容僅供參考，不構成投資建議。</footer>
+</div>
+
+<!--
+  歷史資料庫：純 JSON（非可執行程式碼）。
+  每完成一次掃描，於下方陣列「尾端」新增一筆物件；若當天已有一筆（scan_date 相同），改為覆蓋該筆，不要重複新增。
+  寫入前務必確認：所有字串都必須是合法 JSON 雙引號字串，且任何欄位文字中若出現「</」這個字元序列
+  （常見於複製貼上的網頁標題或程式碼片段），一律要改成「<\/」，否則會提前結束下面的 <\/script> 標籤。
+  每個指標物件必須包含 riskDir："up"（數字越大風險越高）或"down"（數字越小風險越高），
+  每個 trigger 物件必須包含 horizon："short" 或 "mid"，用來讓前端正確計算方向與白話建議。
+-->
+<script type="application/json" id="history-data">[
+  {
+    "scan_date": "2026-08-07",
+    "short_term": {
+      "vix": {
+        "label": "VIX",
+        "value": 16.15,
+        "unit": "",
+        "detail": "8/7開盤16.15 · 前日區間15.3–16.0",
+        "as_of": "2026-08-07(開盤)",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": "<13自滿 / >25恐慌",
+        "note": "各來源日期標示不一致，時效性仍存疑"
+      },
+      "fear_greed": {
+        "label": "CNN Fear & Greed",
+        "value": 60,
+        "unit": "",
+        "as_of": "2026-08-05~06",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">75極端貪婪 / <25極端恐懼",
+        "note": "8/6報導稱情緒持續改善但未附具體數值，暫沿用8/5讀數60"
+      },
+      "aaii_sentiment": {
+        "label": "AAII 散戶情緒 (Bull/Bear)",
+        "value": null,
+        "as_of": "2026-08-04~06",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": "多空差 >±20 為極端",
+        "note": "來源衝突持續：一組Bullish 37.0%(8/6)，另一組Bullish 31.0%/Bearish 42.1%(8/4)，需人工核實 aaii.com"
+      },
+      "put_call_ratio": {
+        "label": "CBOE Equity Put/Call Ratio",
+        "value": null,
+        "unit": "",
+        "as_of": "2026-08-03~04",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.5偏樂觀 / >0.7偏悲觀",
+        "note": "來源劇烈衝突：0.55(8/3) vs 1.11(8/4，Convex)，差距過大疑似定義不同(equity-only vs total)，未採用單一數字"
+      },
+      "naaim": {
+        "label": "NAAIM Exposure Index",
+        "value": 79.7,
+        "unit": "",
+        "detail": "前值84.02",
+        "as_of": "2026-07-29",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">80過度樂觀",
+        "note": "2026-08-01起轉訂閱制，本次仍僅取得7/29免費資料，尚無8月更新"
+      }
+    },
+    "mid_term": {
+      "margin_debt": {
+        "label": "FINRA Margin Debt",
+        "value": 1.5,
+        "unit": "兆美元",
+        "detail": "月增7.9%(6月) · 年增49.02%",
+        "as_of": "2026-06",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "連3月減少為警訊",
+        "note": "連3月創新高（方向相反）；今日讀數(1.50兆/49.02%)與稍早報告(1.53兆/51.5%)略有出入，見data_conflicts"
+      },
+      "margin_debt_gdp": {
+        "label": "Margin Debt / GDP",
+        "value": 4.63,
+        "unit": "%",
+        "detail": "年增39.88%",
+        "as_of": "2026-06",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於中位數2.38%",
+        "note": "歷史紀錄新高"
+      },
+      "ipo_issuance": {
+        "label": "Renaissance IPO 發行量",
+        "value": 64,
+        "unit": "件(Q3)",
+        "detail": "募資US$153億",
+        "as_of": "2026 Q3(截至8月初)",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": "IPO潮通常伴隨頭部",
+        "note": "2021年以來最大單季"
+      },
+      "insider_buy_sell": {
+        "label": "Insider Buy/Sell Ratio",
+        "value": 0.23,
+        "unit": "",
+        "detail": "均值0.39",
+        "as_of": "2026-07",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.17極端賣壓"
+      },
+      "bofa_bull_bear": {
+        "label": "BofA Bull & Bear Indicator",
+        "value": 9.6,
+        "unit": "",
+        "detail": "5年新高",
+        "as_of": "2026年7月最後一週",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">8.0觸發賣出訊號",
+        "note": "本次搜尋未見8月更新讀數，沿用7月數值，已觸發"
+      },
+      "hy_oas_spread": {
+        "label": "ICE BofA US HY OAS Spread",
+        "value": 273,
+        "unit": "bps",
+        "as_of": "2026-08-04",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": ">450bps示警",
+        "note": "來源間273–287bps不等，另有一則報導稱372bps與其他來源明顯不符，疑為過時引用，未採用"
+      },
+      "ad_line": {
+        "label": "NYSE Advance/Decline Line",
+        "value": -1800,
+        "unit": "淨家數",
+        "as_of": "2026-07-29",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "S&P新高但A/D不創新高",
+        "note": "S&P已於8/4創7,737新高，但本次搜尋未取得8月A/D Line新數據以確認/否認頂背離，為本次最大資料缺口"
+      }
+    },
+    "long_term": {
+      "buffett_indicator": {
+        "label": "Buffett Indicator",
+        "value": 219,
+        "unit": "%",
+        "as_of": "2026-03-31",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">150%顯著高估",
+        "note": "官方頁面仍基於3月GDP數據，已滯後逾4個月；多個即時追蹤網站顯示8月已達220%–241%不等，見data_conflicts"
+      },
+      "shiller_cape": {
+        "label": "Shiller CAPE / PE10",
+        "value": 41.9,
+        "unit": "",
+        "as_of": "2026-08-01",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">30歷史高檔",
+        "note": "來源間微幅出入(41.18–42.19)，採用GuruFocus 8/1報價"
+      },
+      "yield_curve_10y2y": {
+        "label": "10Y-2Y Treasury Yield Curve",
+        "value": 0.42,
+        "unit": "%",
+        "as_of": "2026-08-04",
+        "signal": "green",
+        "riskDir": "down",
+        "threshold": "轉負為衰退警訊",
+        "note": "另一來源標示0.45%(8/3)，差異極小"
+      },
+      "lei": {
+        "label": "Conference Board US LEI",
+        "value": 99.1,
+        "unit": "",
+        "detail": "月增-0.2%",
+        "as_of": "2026-06",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "連續下滑轉負為警訊",
+        "note": "下次公布2026-08-20，本次搜尋確認數據未變"
+      },
+      "aaii_allocation": {
+        "label": "AAII 家庭股票配置比",
+        "value": 68.3,
+        "unit": "%",
+        "detail": "6月71.0%→7月68.3%，連續62個月高於均值61.5%",
+        "as_of": "2026-07",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於均值61.5%",
+        "note": "本次搜尋確認7月為最新一期，已非衝突而是趨勢：月減2.7個百分點但仍遠高於均值"
+      }
+    },
+    "triggers": {
+      "vix_above_25": {
+        "label": "VIX 突破並站穩 >25",
+        "status": "16.15",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "fear_greed_drop": {
+        "label": "Fear & Greed >75 跌回 <50",
+        "status": "現值60，近期未見>75",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "margin_debt_3mo_decline": {
+        "label": "Margin Debt 連續3個月月減",
+        "status": "連續3個月創新高（相反）",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "hy_spread_above_450": {
+        "label": "HY Spread 擴張 >4.5%",
+        "status": "~2.73%",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "ad_line_divergence": {
+        "label": "A/D Line 頂背離",
+        "status": "S&P 8/4創新高，A/D Line僅有7/29數據可查、尚未確認",
+        "hit": "warn",
+        "horizon": "mid"
+      },
+      "bofa_bull_bear_above_8": {
+        "label": "BofA Bull & Bear >8.0",
+        "status": "9.6",
+        "hit": "yes",
+        "horizon": "mid"
+      },
+      "insider_below_017": {
+        "label": "Insider Buy/Sell <0.17",
+        "status": "0.23",
+        "hit": "no",
+        "horizon": "mid"
+      }
+    },
+    "top_signal": "BofA Bull & Bear Indicator（9.6）：唯一確定觸發硬閾值的指標，本次重新查證仍維持5年新高讀數，與Margin Debt年增49%、CAPE 41.9、Buffett Indicator同步發出過熱訊號；同時S&P 500於8/4創7,737新高但A/D Line缺乏同期數據確認，為本次掃描最需留意的資料缺口。",
+    "data_conflicts": [
+      "AAII 散戶情緒調查：三組讀數互相矛盾（Bullish 37.0%(8/6) vs 31.0%/Bearish 42.1%(8/4) vs 更早的29.6%/42.3%），請至 aaii.com/sentimentsurvey 核實",
+      "CBOE Equity Put/Call Ratio：0.55(8/3) 與 1.11(8/4，Convex來源) 差距過大，疑似指標定義不同（equity-only vs total put/call），本次未採用單一數字",
+      "FINRA Margin Debt：本次GuruFocus查得$1.50兆／年增49.02%，與稍早流傳的$1.53兆／年增51.5%不同，可能為四捨五入或資料版本差異",
+      "ICE BofA HY OAS利差：來源間273bps(8/4)–287bps(7月)不等，另有一則報導稱「372bps創2023年12月以來新高」與其餘來源明顯不符，判斷為過時或錯誤引用，未採用",
+      "NYSE A/D Line：最新可得數據仍停留在7/29，S&P 500已於8/4創7,737新高，但未查得8月的A/D Line更新數值以確認或排除頂背離",
+      "Buffett Indicator：官方currentmarketvaluation.com頁面仍基於3/31 GDP數據顯示219%，但多個即時追蹤網站顯示8月已達220%–241%不等，官方數據滯後程度可能被低估",
+      "NAAIM Exposure Index：2026-08-01起轉訂閱制，本次搜尋仍僅能取得7/29免費資料",
+      "Insider Buy/Sell Ratio：滯後至2026-07月度數據",
+      "Conference Board LEI：滯後至2026-06月度數據，下次公布2026-08-20",
+      "Shiller CAPE：來源間微幅出入(41.18–42.19)，採用GuruFocus 8/1報價41.9"
+    ]
+  },
+  {
+    "scan_date": "2026-08-13",
+    "short_term": {
+      "vix": {
+        "label": "VIX",
+        "value": 14.68,
+        "unit": "",
+        "detail": "8/12收盤15.28 → 8/13盤中約14.68（續降3.93%）",
+        "as_of": "2026-08-13(盤中)",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": "<13自滿 / >25恐慌",
+        "note": "連續多日走低，趨近<13自滿區間但尚未跌破；來源網頁片段疑似混雜今日開盤區間與52週數據，僅採信收盤/最新報價方向"
+      },
+      "fear_greed": {
+        "label": "CNN Fear & Greed",
+        "value": 61,
+        "unit": "",
+        "as_of": "2026-08-12",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">75極端貪婪 / <25極端恐懼",
+        "note": "持續處於Greed區但未達極端，與前次(60)幾乎持平"
+      },
+      "aaii_sentiment": {
+        "label": "AAII 散戶情緒 (Bull/Bear)",
+        "value": null,
+        "as_of": "2026-08(當週未能定位)",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": "多空差 >±20 為極端",
+        "note": "本次搜尋最新可辨識讀數為8/6當週：Bullish 37.0%/Neutral 25.0%/Bearish 38.0%（多空差約-1%），但無法確認是否有更新的8/13前一週數據；另有更早7/23當週29.6%/28.1%/42.3%版本流傳，仍需至aaii.com核實"
+      },
+      "put_call_ratio": {
+        "label": "CBOE Equity Put/Call Ratio",
+        "value": 0.54,
+        "unit": "",
+        "as_of": "2026-08-07",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.5偏樂觀 / >0.7偏悲觀",
+        "note": "官方CBOE Equity Put/Call本次仍未查得8/7後的每日數字，沿用0.54並標示滯後；另查得不同定義的「call-to-put」比率8/11為0.80、近一個月均值達0.9（四年高點），與equity-only定義不同，未採用"
+      },
+      "naaim": {
+        "label": "NAAIM Exposure Index",
+        "value": 79.7,
+        "unit": "",
+        "detail": "前值84.02",
+        "as_of": "2026-07-29",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">80過度樂觀",
+        "note": "2026-08-01起轉訂閱制，本次搜尋仍僅取得7/29免費資料，尚無8月更新"
+      }
+    },
+    "mid_term": {
+      "margin_debt": {
+        "label": "FINRA Margin Debt",
+        "value": 1.53,
+        "unit": "兆美元",
+        "detail": "7月續創新高 · 年增約49%（沿用6月年增率，7月精確年增率未查得）",
+        "as_of": "2026-07",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "連3月減少為警訊",
+        "note": "槓桿倍數（保證金債務/現金餘額）逼近7.0倍，屬歷史極端水準"
+      },
+      "margin_debt_gdp": {
+        "label": "Margin Debt / GDP",
+        "value": 4.63,
+        "unit": "%",
+        "detail": "年增39.88%",
+        "as_of": "2026-06",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於中位數2.38%",
+        "note": "本次搜尋未查得7月更新數字，沿用6月數據，歷史紀錄新高"
+      },
+      "ipo_issuance": {
+        "label": "Renaissance IPO 發行量",
+        "value": 64,
+        "unit": "件(Q3，官方統計未含SpaceX)",
+        "detail": "募資US$153億（官方頁面數字沿用8/7）；SpaceX本週以US$750億定價完成史上最大IPO之一，首日大漲19%，但依Renaissance規則要到Q3季度重新平衡才會正式計入統計",
+        "as_of": "2026 Q3(截至8月初，未反映SpaceX)",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "IPO潮通常伴隨頭部",
+        "note": "SpaceX單一案即募資750億美元、上市首日市值達1.75兆美元，是本次掃描新增的重大過熱訊號，官方季度統計尚未更新反映"
+      },
+      "insider_buy_sell": {
+        "label": "Insider Buy/Sell Ratio",
+        "value": 0.23,
+        "unit": "",
+        "detail": "均值0.34，區間0.17–0.61",
+        "as_of": "2026-07",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.17極端賣壓",
+        "note": "整體市場8月數據尚未公布；僅查得科技類股子項目8月讀數0.12（非整體市場，未採用）"
+      },
+      "bofa_bull_bear": {
+        "label": "BofA Bull & Bear Indicator",
+        "value": 9.7,
+        "unit": "",
+        "detail": "8月由9.4攀升至9.7，2021年以來最極端讀數；同時基金經理人現金水位跌破4.0%門檻（約3.6%），第二道獨立警訊同步觸發",
+        "as_of": "2026-08(最新一期)",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">8.0觸發賣出訊號",
+        "note": "BofA已正式發出2021年以來首次股票賣出訊號，建議轉向防禦性資產（必需消費、醫療、REITs、美元），讀數已逼近10.0滿分"
+      },
+      "hy_oas_spread": {
+        "label": "ICE BofA US HY OAS Spread",
+        "value": 271,
+        "unit": "bps",
+        "as_of": "2026-08-06",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": ">450bps示警",
+        "note": "來源間271–273bps不等，遠低於450bps警戒線，信用市場尚未定價系統性風險"
+      },
+      "ad_line": {
+        "label": "NYSE Advance/Decline Line",
+        "value": null,
+        "unit": "淨家數",
+        "as_of": "2026-08(無精確累計值)",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "S&P新高但A/D不創新高",
+        "note": "本次未查得任何8月的精確累計淨家數；質化證據本身互相矛盾——Goldman稱今年廣度為數十年最窄（H1七月僅18%個股創52週新高），但另有近期數據顯示8月已有約72%個股站上200日均線（創2024年12月以來新高）且等權重指數今年以來已轉為小幅跑贏大盤(14% vs 13.2%)，顯示廣度可能正在改善而非惡化。S&P 500最新收盤紀錄為8/5的7,791.83，8/12收在7,742左右、仍低於紀錄約0.6%，本次掃描時點並非「創新高」狀態，故不宜比照嚴格定義判定為已觸發背離"
+      }
+    },
+    "long_term": {
+      "buffett_indicator": {
+        "label": "Buffett Indicator",
+        "value": 229.9,
+        "unit": "%",
+        "as_of": "2026-08-06",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">150%顯著高估",
+        "note": "GuruFocus官方數字(8/6)229.9%；另有即時追蹤網站顯示8/11–8/12已達238.1%–241.2%，官方與即時追蹤落差持續存在，見data_conflicts"
+      },
+      "shiller_cape": {
+        "label": "Shiller CAPE / PE10",
+        "value": 41.87,
+        "unit": "",
+        "as_of": "2026-08",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">30歷史高檔",
+        "note": "來源間41.18–41.87不等，仍為1881年以來次高（僅次於1999–2000的44.2）"
+      },
+      "yield_curve_10y2y": {
+        "label": "10Y-2Y Treasury Yield Curve",
+        "value": 0.45,
+        "unit": "%",
+        "as_of": "2026-08-03",
+        "signal": "green",
+        "riskDir": "down",
+        "threshold": "轉負為衰退警訊",
+        "note": "本次搜尋未查得8/3後更新的每日利差數值（10Y殖利率8/12為4.69%，但對應利差未查得），沿用8/3數據並標示滯後"
+      },
+      "lei": {
+        "label": "Conference Board US LEI",
+        "value": 99.1,
+        "unit": "",
+        "detail": "月增-0.2%",
+        "as_of": "2026-06",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "連續下滑轉負為警訊",
+        "note": "下次公布2026-08-20，本次搜尋確認7月數據尚未公布，數字未變"
+      },
+      "aaii_allocation": {
+        "label": "AAII 家庭股票配置比",
+        "value": 68.3,
+        "unit": "%",
+        "detail": "連續62個月高於均值61.5%",
+        "as_of": "2026-07",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於均值61.5%",
+        "note": "8月調查通常於9月初才公布，本次搜尋確認尚無新一期數據，沿用7月"
+      }
+    },
+    "triggers": {
+      "vix_above_25": {
+        "label": "VIX 突破並站穩 >25",
+        "status": "14.68",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "fear_greed_drop": {
+        "label": "Fear & Greed >75 跌回 <50",
+        "status": "現值61，近期未見>75",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "margin_debt_3mo_decline": {
+        "label": "Margin Debt 連續3個月月減",
+        "status": "7月續創新高（相反）",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "hy_spread_above_450": {
+        "label": "HY Spread 擴張 >4.5%",
+        "status": "~271bps",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "ad_line_divergence": {
+        "label": "S&P 新高但 A/D Line 不創新高",
+        "status": "無精確數值可查證；質化證據矛盾（H1廣度創數十年最窄 vs 8月72%個股站上200日均線、等權重轉為跑贏），且掃描當下S&P未處於創新高狀態（距8/5紀錄7,791.83仍差約0.6%），本次下修為warn，不宜判定為yes",
+        "hit": "warn",
+        "horizon": "mid"
+      },
+      "bofa_bull_bear_above_8": {
+        "label": "BofA Bull & Bear >8.0",
+        "status": "9.7",
+        "hit": "yes",
+        "horizon": "mid"
+      },
+      "insider_below_017": {
+        "label": "Insider Buy/Sell <0.17",
+        "status": "0.23",
+        "hit": "no",
+        "horizon": "mid"
+      }
+    },
+    "top_signal": "BofA Bull & Bear Indicator（9.7）本次確認已由9.4續升，逼近10.0滿分，且已正式觸發BofA自身2021年以來首次賣出訊號，同時基金經理人現金水位跌破4.0%第二道門檻；本次掃描同步發現SpaceX以史上最大IPO之一（US$750億）定價上市，與Margin Debt(1.53兆/續創新高)、Buffett Indicator(229.9%~241%)、Shiller CAPE(41.87)同步構成多重過熱訊號。另需特別說明：今晨稍早一版掃描曾將A/D Line頂背離標記為「yes」，但本次重新查證發現廣度證據其實互相矛盾（且S&P當下並未處於創新高狀態），故已下修為「warn」，避免在缺乏精確數據下編造確定結論。",
+    "data_conflicts": [
+      "AAII 散戶情緒調查：本次最新可辨識為8/6當週（Bullish 37.0%/Neutral 25.0%/Bearish 38.0%），但無法確認是否有更新至8/13前一週的數據，另有更早7/23當週(29.6%/28.1%/42.3%)版本流傳，請至aaii.com/sentimentsurvey人工核實",
+      "CBOE Equity Put/Call Ratio：官方equity-only定義最新僅查得0.54(8/7)；另查得不同定義的「call-to-put」比率8/11為0.80、近一個月均值達0.9（四年最高），兩者定義不同不可直接比較，本次僅採用官方equity-only數字並標示滯後",
+      "FINRA Margin Debt：7月讀數$1.53兆已確認，但精確年增率未查得，沿用6月的49.02%",
+      "Renaissance IPO：SpaceX本週以US$750億完成定價上市（史上最大IPO之一），但依Renaissance規則要到Q3重新平衡才計入官方統計，目前官方頁面數字（64件/$153億）尚未反映此案",
+      "NYSE A/D Line：本次未能取得任何精確的8月累計淨家數；廣度相關報導本身互相矛盾——一派稱今年廣度為數十年最窄，另一派稱8月已有72%個股站上200日均線、等權重指數轉為跑贏，且S&P當下未處於創新高狀態，判斷從上次掃描的「yes」下修為「warn」",
+      "Buffett Indicator：GuruFocus官方(8/6)229.9% 與即時追蹤網站8/11(241.2%)、8/12(238.1%)相差達8–11個百分點，官方與即時追蹤落差持續存在",
+      "Shiller CAPE：來源間微幅出入(41.18–41.87)，採用GuruFocus 41.87",
+      "10Y-2Y殖利率利差：本次未查得8/3之後的每日利差更新數值（僅查得10Y殖利率本身8/12為4.69%），沿用8/3的0.45%並標示滯後",
+      "NAAIM Exposure Index：訂閱制生效後本次搜尋仍僅能取得7/29免費資料",
+      "Insider Buy/Sell Ratio：整體市場數據滯後至2026-07月度，僅科技子項目更新至8月（0.12，未採用）",
+      "Conference Board LEI：滯後至2026-06月度數據，下次公布2026-08-20",
+      "AAII 家庭股票配置比：8月調查通常於9月初才公布，本次確認尚無新一期數據，沿用7月68.3%"
+    ]
+  },
+  {
+    "scan_date": "2026-08-14",
+    "short_term": {
+      "vix": {
+        "label": "VIX",
+        "value": 14.63,
+        "unit": "",
+        "detail": "8/14開盤14.68，盤中區間14.39–14.80，現值14.63（+0.55%）",
+        "as_of": "2026-08-14(盤中)",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": "<13自滿 / >25恐慌",
+        "note": "本次重新搜尋確認持續在近期低檔盤整，8/13曾一度跌破14.40（2026年低點），尚未觸及13的自滿臨界"
+      },
+      "fear_greed": {
+        "label": "CNN Fear & Greed",
+        "value": 62,
+        "unit": "",
+        "as_of": "2026-08-13",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">75極端貪婪 / <25極端恐懼",
+        "note": "本次搜尋未查得8/14當日更新，沿用8/13讀數62，與前次掃描相同，持續處於Greed區但未達極端"
+      },
+      "aaii_sentiment": {
+        "label": "AAII 散戶情緒 (Bull/Bear)",
+        "value": -3.2,
+        "unit": "pp(多空差)",
+        "detail": "Bullish 34.7% / Neutral 27.4% / Bearish 37.9%（當週至8/12）",
+        "as_of": "2026-08-12(當週)",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": "多空差 >±20 為極端",
+        "note": "本次重新查證確認為最新一期讀數（週度資料，8/12當週為最新，尚無8/19當週更新），散戶維持淨看空(-3.2pp)，遠低於±20極端門檻"
+      },
+      "put_call_ratio": {
+        "label": "CBOE Equity Put/Call Ratio",
+        "value": 0.54,
+        "unit": "",
+        "as_of": "2026-08-07",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.5偏樂觀 / >0.7偏悲觀",
+        "note": "官方CBOE Equity Put/Call本次仍未查得8/7後的每日更新數字，滯後已達7天；本次直接抓取cboe.com每日統計頁另查得一個未標示日期的0.59讀數，因無法確認對應交易日故未採用；另有7/31(0.63)、8/4(1.11)等舊版本數字互相矛盾，均未採用"
+      },
+      "naaim": {
+        "label": "NAAIM Exposure Index",
+        "value": 79.7,
+        "unit": "",
+        "detail": "前值84.02",
+        "as_of": "2026-07-29",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">80過度樂觀",
+        "note": "2026-08起轉訂閱制，本次搜尋仍僅取得7/29免費資料，滯後已達16天"
+      }
+    },
+    "mid_term": {
+      "margin_debt": {
+        "label": "FINRA Margin Debt",
+        "value": 1.53,
+        "unit": "兆美元",
+        "detail": "6月增7.9%·年增51.5%（GuruFocus官方頁面顯示$1.502兆，數字略有出入，見data_conflicts）",
+        "as_of": "2026-06",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "連3月減少為警訊",
+        "note": "本次搜尋再次確認GuruFocus官方頁面最新僅到2026年6月，但Yahoo Finance、Barron's等多家媒體本次仍持續將此6月數字誤稱為「7月」創新高，此誤稱已連續出現在8/7、8/13、8/14三次掃描中；槓桿倍數逼近7.0倍歷史極端水準"
+      },
+      "margin_debt_gdp": {
+        "label": "Margin Debt / GDP",
+        "value": 4.63,
+        "unit": "%",
+        "detail": "年增39.88%",
+        "as_of": "2026-06",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於中位數2.38%",
+        "note": "本次搜尋仍未查得7月更新數字，沿用6月數據，為歷史紀錄新高"
+      },
+      "ipo_issuance": {
+        "label": "Renaissance IPO 發行量",
+        "value": 64,
+        "unit": "件(Q3，官方統計未含SpaceX)",
+        "detail": "募資US$153億；2026年迄今約200件IPO、募資US$376億(年增27.2%)；SpaceX(US$750億)因Renaissance規則要待Q3重新平衡才計入官方統計",
+        "as_of": "2026 Q3(截至8月中，未反映SpaceX)",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "IPO潮通常伴隨頭部",
+        "note": "本次重新搜尋官方頁面數字仍為64件/$153億，與前次掃描相同；本次新增查得全年YTD統計(約200件/$376億，年增39.9%/27.2%)作為補充脈絡，SpaceX仍待正式納入"
+      },
+      "insider_buy_sell": {
+        "label": "Insider Buy/Sell Ratio",
+        "value": 0.23,
+        "unit": "",
+        "detail": "均值0.34，區間0.17–0.61",
+        "as_of": "2026-07",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.17極端賣壓",
+        "note": "整體市場8月數據本次搜尋仍未公布；僅科技類股子項目8月讀數0.12（非整體市場，未採用）"
+      },
+      "bofa_bull_bear": {
+        "label": "BofA Bull & Bear Indicator",
+        "value": 9.7,
+        "unit": "",
+        "detail": "已連續三次掃描（8/7、8/13、8/14）維持在9.7，2021年以來最極端讀數",
+        "as_of": "2026-08(最新一期)",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">8.0觸發賣出訊號",
+        "note": "本次搜尋仍未發現本週有新一期更新，正式賣出訊號與基金經理人現金水位跌破4%門檻持續同步有效，數字已連續三次掃描未變"
+      },
+      "hy_oas_spread": {
+        "label": "ICE BofA US HY OAS Spread",
+        "value": 271,
+        "unit": "bps",
+        "as_of": "2026-08-12",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": ">450bps示警",
+        "note": "本次搜尋查得271bps，惟不同來源標示對應日期不一（8/6與8/12皆有出現），採信與FRED序列連結之govspending來源標示的8/12；遠低於450bps警戒線"
+      },
+      "ad_line": {
+        "label": "NYSE Advance/Decline Line",
+        "value": null,
+        "unit": "淨家數",
+        "as_of": "2026-08(無精確累計值)",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "S&P新高但A/D不創新高",
+        "note": "本次確認S&P 500已於8/13創收盤歷史新高7,798.99，「指數創新高」條件已明確成立；但本次搜尋仍未查得精確的A/D Line累計淨家數，無法據以判斷是否同步創高。質化證據：NYSE本次查得已連續183個交易日無「80%下跌量」極端弱勢交易日的紀錄（偏多），但Goldman先前報告稱今年廣度為數十年最窄（偏空），證據仍互相矛盾，維持warn判斷不變"
+      }
+    },
+    "long_term": {
+      "buffett_indicator": {
+        "label": "Buffett Indicator",
+        "value": 229.9,
+        "unit": "%",
+        "as_of": "2026-08",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">150%顯著高估",
+        "note": "GuruFocus官方本次查得229.9%，惟頁面標示的資料日期本身在不同時間點被標為8/6或8/8，存在內部不一致；另查得即時追蹤網站238.1–241%與不同GDP基期估算的292%等更高版本，官方與即時追蹤落差持續存在"
+      },
+      "shiller_cape": {
+        "label": "Shiller CAPE / PE10",
+        "value": 41.87,
+        "unit": "",
+        "as_of": "2026-08",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">30歷史高檔",
+        "note": "來源間41.18–41.87不等（另一來源稱41.2，較前期40.6續升），與上次掃描持平，仍為1881年以來次高（僅次於1999–2000的44.2），本次查得已達1748個月以來第98.9百分位"
+      },
+      "yield_curve_10y2y": {
+        "label": "10Y-2Y Treasury Yield Curve",
+        "value": 0.5,
+        "unit": "%",
+        "as_of": "2026-08-14",
+        "signal": "green",
+        "riskDir": "down",
+        "threshold": "轉負為衰退警訊",
+        "note": "本次FRED官方T10Y2Y頁面直接存取被拒(HTTP 403)，改以TradingEconomics當日公布的10年期殖利率4.66%減2年期殖利率4.16%換算得0.50%，與前次掃描沿用的FRED 8/3數據(0.45%)相比為不同來源、不同計算路徑，數字上略為擴大，惟屬不同方法論所得，比較時應保留一定保留態度；曲線仍維持正斜率未倒掛"
+      },
+      "lei": {
+        "label": "Conference Board US LEI",
+        "value": 99.1,
+        "unit": "",
+        "detail": "月增-0.2%",
+        "as_of": "2026-06",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "連續下滑轉負為警訊",
+        "note": "本次確認7月數據仍未公布，下次公布為2026-08-20，數字未變"
+      },
+      "aaii_allocation": {
+        "label": "AAII 家庭股票配置比",
+        "value": 68.3,
+        "unit": "%",
+        "detail": "連續62個月高於均值61.5%；債券配置15.7%(-0.2pp)、現金配置16.0%(-0.6pp)",
+        "as_of": "2026-07",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於均值61.5%",
+        "note": "本次重新查證確認7月讀數68.3%（較6月增0.8pp）無誤，數字與前次掃描相同，8月調查通常於9月初才公布"
+      }
+    },
+    "triggers": {
+      "vix_above_25": {
+        "label": "VIX 突破並站穩 >25",
+        "status": "14.63",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "fear_greed_drop": {
+        "label": "Fear & Greed >75 跌回 <50",
+        "status": "現值62，近期未見>75",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "margin_debt_3mo_decline": {
+        "label": "Margin Debt 連續3個月月減",
+        "status": "6月續創新高（相反）",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "hy_spread_above_450": {
+        "label": "HY Spread 擴張 >4.5%",
+        "status": "~271bps",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "ad_line_divergence": {
+        "label": "S&P 新高但 A/D Line 不創新高",
+        "status": "S&P已於8/13確認創收盤新高7,798.99，惟A/D Line精確累計值仍查無數字；183日無80%下跌量紀錄(偏多)與Goldman數十年最窄廣度說法(偏空)持續矛盾，維持warn",
+        "hit": "warn",
+        "horizon": "mid"
+      },
+      "bofa_bull_bear_above_8": {
+        "label": "BofA Bull & Bear >8.0",
+        "status": "9.7",
+        "hit": "yes",
+        "horizon": "mid"
+      },
+      "insider_below_017": {
+        "label": "Insider Buy/Sell <0.17",
+        "status": "0.23",
+        "hit": "no",
+        "horizon": "mid"
+      }
+    },
+    "top_signal": "S&P 500已於8/13正式確認創下收盤歷史新高7,798.99，使A/D Line頂背離的判斷條件（指數創新高）首度明確成立；但本次搜尋仍未能查得精確的A/D Line累計淨家數，只查得「NYSE已連續183個交易日無80%下跌量極端弱勢日」這項偏多的廣度佐證，與Goldman先前「今年廣度為數十年最窄」的偏空說法持續矛盾，因此維持warn而非升級為yes。本次另一項變化是10Y-2Y殖利率曲線改用TradingEconomics即時殖利率換算（因FRED官方頁面本次無法存取），數字由0.45%微幅擴大至0.50%，但因方法論不同，比較時需保留一定保留態度。市場結構主軸未變：BofA Bull & Bear Indicator已連續三次掃描維持9.7，是本次風險結構中最持久的極端訊號；Margin Debt(1.53兆)、Buffett Indicator(229.9%~292%)、Shiller CAPE(41.87)、AAII配置比(68.3%)同步處於歷史高檔。",
+    "data_conflicts": [
+      "FINRA Margin Debt：GuruFocus官方頁面最新僅到2026年6月($1.502兆–$1.53兆)，但Yahoo Finance、Barron's等媒體本次仍持續將此6月數字誤稱為「7月」創新高，此誤稱已連續出現在8/7、8/13、8/14三次掃描中，7月官方數據實際尚未公布",
+      "CBOE Equity Put/Call Ratio：官方equity-only定義最新僅查得0.54(8/7)，滯後已達7天；本次直接抓取cboe.com每日統計頁另查得一個未標示日期的0.59讀數，因無法確認對應交易日未採用；另有7/31(0.63)、8/4(1.11)等舊版本數字彼此矛盾，均未採用",
+      "Buffett Indicator：GuruFocus官方數字229.9%，但頁面本身標示的資料日期在8/6與8/8間不一致；另有即時追蹤網站顯示238.1–241%與採用不同GDP基期的292%估算版本，三者落差持續存在",
+      "Shiller CAPE：來源間微幅出入(41.18–41.87，另一來源標示41.2)，採用GuruFocus 41.87",
+      "10Y-2Y殖利率利差：FRED官方T10Y2Y頁面本次直接存取被拒(HTTP 403)，改採TradingEconomics當日10Y(4.66%)減2Y(4.16%)殖利率換算為0.50%，與前次掃描沿用的FRED 8/3數據(0.45%)屬不同來源、不同方法論，比較時需保留態度",
+      "NAAIM Exposure Index：訂閱制生效後本次搜尋仍僅取得7/29免費資料，滯後已達16天",
+      "Insider Buy/Sell Ratio：整體市場數據滯後至2026-07月度，僅科技子項目更新至8月(0.12，未採用)",
+      "Conference Board LEI：滯後至2026-06月度數據，下次公布為2026-08-20",
+      "NYSE A/D Line：本次未能取得精確的8月累計淨家數；S&P已於8/13確認創收盤新高7,798.99，使頂背離條件的「創新高」前提首度明確成立，但廣度佐證仍互相矛盾（183日無80%下跌量的強廣度紀錄 vs Goldman數十年最窄廣度說法），故維持warn",
+      "Renaissance IPO：SpaceX(US$750億)仍待Q3重新平衡後才計入官方統計，目前頁面數字(64件/$153億)尚未反映"
+    ]
+  },
+  {
+    "scan_date": "2026-08-17",
+    "short_term": {
+      "vix": {
+        "label": "VIX",
+        "value": 14.64,
+        "unit": "",
+        "detail": "8/14(週五)收盤14.25(-2.60%)，2026年最低收盤；8/17(週一)開盤14.64，盤中區間14.18–14.72",
+        "as_of": "2026-08-17(開盤)",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": "<13自滿 / >25恐慌",
+        "note": "本次（下午重掃）再次搜尋確認VIX延續近期低檔盤整，數字與上午掃描一致，尚未觸及13的自滿臨界，也遠低於25的恐慌閾值"
+      },
+      "fear_greed": {
+        "label": "CNN Fear & Greed",
+        "value": 65,
+        "unit": "",
+        "detail": "8/12讀數61、8/14讀數65；本次另查得Benzinga報導提及「S&P連兩日下跌、通膨數據公布前市場情緒轉弱」但未附精確數字，指數仍標示處於Greed區",
+        "as_of": "2026-08-14",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">75極端貪婪 / <25極端恐懼",
+        "note": "本次搜尋仍未查得8/17當日精確數字，沿用8/14讀數65；Benzinga報導暗示情緒可能已轉弱，但因無具體數字不予採用，僅列為方向性觀察"
+      },
+      "aaii_sentiment": {
+        "label": "AAII 散戶情緒 (Bull/Bear)",
+        "value": -3.2,
+        "unit": "pp(多空差)",
+        "detail": "Bullish 34.7% / Neutral 27.4% / Bearish 37.9%（當週至8/12）",
+        "as_of": "2026-08-12(當週)",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": "多空差 >±20 為極端",
+        "note": "本次重新查證確認仍為最新一期讀數（週度資料，下一期預計8/19當週公布），數字與上午掃描相同，遠低於±20極端門檻"
+      },
+      "put_call_ratio": {
+        "label": "CBOE Equity Put/Call Ratio",
+        "value": 0.54,
+        "unit": "",
+        "as_of": "2026-08-07",
+        "detail": "本次另查得8/4讀數1.11（另一來源同日顯示0.55），與8/7的0.54方向不一致，見data_conflicts",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.5偏樂觀 / >0.7偏悲觀",
+        "note": "官方CBOE Equity Put/Call本次搜尋仍未查得8/7後的每日更新數字，滯後天數已達10天；本次另查得8/4的讀數存在1.11與0.55兩個版本，與8/7的0.54互相矛盾，資料品質持續惡化"
+      },
+      "naaim": {
+        "label": "NAAIM Exposure Index",
+        "value": 79.7,
+        "unit": "",
+        "detail": "前值84.02",
+        "as_of": "2026-07-29",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">80過度樂觀",
+        "note": "2026-08起轉訂閱制後，本次搜尋仍僅取得7/29免費資料，滯後天數已達19天，數據新鮮度持續惡化"
+      }
+    },
+    "mid_term": {
+      "margin_debt": {
+        "label": "FINRA Margin Debt",
+        "value": 1.53,
+        "unit": "兆美元",
+        "detail": "6月增7.9%·年增51.5%（GuruFocus官方頁面顯示$1.502兆）；本次另查得一篇文章標題聲稱「創紀錄$1.5兆、債務/現金比率達3.40」，署名日期不明確，可能對應7月數據",
+        "as_of": "2026-06",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "連3月減少為警訊",
+        "note": "本次搜尋再次確認GuruFocus官方最新僅到2026年6月，7月數據仍未正式公布；「比率3.40」說法本次仍無法確認具體對應月份與計算基礎，與先前掃描沿用的「逼近7.0倍」描述存在明顯落差，已列入data_conflicts"
+      },
+      "margin_debt_gdp": {
+        "label": "Margin Debt / GDP",
+        "value": 4.63,
+        "unit": "%",
+        "detail": "年增39.88%",
+        "as_of": "2026-06",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於中位數2.38%",
+        "note": "本次搜尋仍未查得7月更新數字，沿用6月數據；另查得一篇文章引用「4.1%（50年中位數1.5%）」的版本，與GuruFocus官方4.63%（中位數2.38%）存在落差，屬不同計算基礎"
+      },
+      "ipo_issuance": {
+        "label": "Renaissance IPO 發行量",
+        "value": 102,
+        "unit": "件(2026年迄今YTD，至8月中)",
+        "detail": "官方季度拆分：Q1 35件/$99億、Q2 48件/$1048億(含SpaceX $750億，已計入官方統計，非「待計入」)；Q3(7-9月)尚無官方完整季報，本次搜尋亦查得「64件/$153億」的說法，惟其「創2021年以來最大單季」的敘述與Q2已創$1048億紀錄矛盾，高度懷疑實為Q3『2025』舊資料被誤植為2026",
+        "as_of": "2026(YTD至8月中)",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "IPO潮通常伴隨頭部",
+        "note": "本次重新搜尋發現重大資料修正：SpaceX($750億)IPO已於2026年第二季完成並計入官方Q2統計（48件/$1048億，2021年來最大單季），並非如先前四次掃描（8/7、8/13、8/14、8/17上午）所述「待Q3重新平衡才計入」，先前描述判斷有誤，本次已更正；YTD總數採官方102件版本，前次掃描並列的「約200件/$376億YTD」版本本次仍無法核實來源，可能為不同資料庫口徑"
+      },
+      "insider_buy_sell": {
+        "label": "Insider Buy/Sell Ratio",
+        "value": 0.23,
+        "unit": "",
+        "detail": "均值0.34，區間0.17–0.61，年增4.55%",
+        "as_of": "2026-07",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.17極端賣壓",
+        "note": "整體市場8月數據本次搜尋仍未公布；僅科技類股子項目8月讀數0.12（非整體市場，未採用），與先前掃描情況相同"
+      },
+      "bofa_bull_bear": {
+        "label": "BofA Bull & Bear Indicator",
+        "value": 9.7,
+        "unit": "",
+        "detail": "本次查得Bloomberg報導確認此讀數係由前值9.4攀升而來，為2021年以來最極端水位；基金經理人現金水位約3.6%，續處於4%警戒線下方",
+        "as_of": "2026-08(最新一期)",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">8.0觸發賣出訊號",
+        "note": "本次搜尋仍未發現本週有新一期更新，正式賣出訊號持續有效；本次新查得的Bloomberg報導提供了讀數由9.4升至9.7的來源佐證，強化前次掃描判斷的可信度"
+      },
+      "hy_oas_spread": {
+        "label": "ICE BofA US HY OAS Spread",
+        "value": 271,
+        "unit": "bps",
+        "detail": "另有來源標示2026年8月概況為2.72%(272bps)，與271bps基本一致",
+        "as_of": "2026-08-13",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": ">450bps示警",
+        "note": "本次搜尋查得271bps（8/13）與272bps（泛稱8月）兩個高度接近的數字，遠低於450bps警戒線，信用市場尚未定價系統性風險，判斷不變"
+      },
+      "ad_line": {
+        "label": "NYSE Advance/Decline Line",
+        "value": null,
+        "unit": "淨家數",
+        "as_of": "2026-08(無精確累計值)",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "S&P新高但A/D不創新高",
+        "note": "本次搜尋仍未查得精確的A/D Line累計淨家數。S&P 500維持8/13創下的收盤歷史新高7,798.99（2026年第27次新高），本次查得的另一篇廣度分析文章指出「近12個交易日平均僅約7日個股上漲」，佐證參與廣度不足的質化描述，但該文未附精確日期與淨家數，未採用其數字，僅作為warn判斷的補充佐證"
+      }
+    },
+    "long_term": {
+      "buffett_indicator": {
+        "label": "Buffett Indicator",
+        "value": 229.9,
+        "unit": "%",
+        "as_of": "2026-08",
+        "detail": "本次查得的版本落差進一步擴大：GuruFocus另頁2.444(244.4%)、currentmarketvaluation即時估算292%(8/12)、官方Q1 2026讀數250%、另一來源209.2%",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">150%顯著高估",
+        "note": "GuruFocus官方主頁面本次仍查得229.9%；本次搜尋額外發現244.4%、292%、250%（官方Q1）、209.2%共4個不同版本，版本間落差本次進一步擴大至逾80個百分點，反映不同計算基礎（GNP vs GDP、即時估算vs官方季度）與資料時點差異，均列入data_conflicts"
+      },
+      "shiller_cape": {
+        "label": "Shiller CAPE / PE10",
+        "value": 42.18,
+        "unit": "",
+        "as_of": "2026-08",
+        "detail": "本次另查得Multpl最新讀數42.56，高於GuruFocus的42.18",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">30歷史高檔",
+        "note": "GuruFocus本次仍查得42.18；另查得Multpl官方頁面顯示42.56，為本輪所有掃描中查得的最高讀數，另一來源仍標示41.2×，三者落差41.2–42.56。若採最高值42.56計算，已比前次紀錄再逼近1999–2000年的44.2歷史高點"
+      },
+      "yield_curve_10y2y": {
+        "label": "10Y-2Y Treasury Yield Curve",
+        "value": 0.51,
+        "unit": "%",
+        "as_of": "2026-08-14",
+        "detail": "10年期4.68% / 2年期4.17%（Seeking Alpha 8/14殖利率快照，直接算出0.51%）",
+        "signal": "green",
+        "riskDir": "down",
+        "threshold": "轉負為衰退警訊",
+        "note": "本次查得Seeking Alpha 8/14殖利率快照提供10Y與2Y個別絕對水位，兩者相減同樣得0.51%，與前次掃描透過FRED關聯來源查得的數字互相印證，可信度提高；曲線持續維持正斜率未倒掛，處於約58百分位的相對陡峭區間"
+      },
+      "lei": {
+        "label": "Conference Board US LEI",
+        "value": 99.1,
+        "unit": "",
+        "detail": "月增-0.2%",
+        "as_of": "2026-06",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "連續下滑轉負為警訊",
+        "note": "本次確認7月數據仍未公布，數字與先前掃描相同，下次公布為2026-08-20（3天後）"
+      },
+      "aaii_allocation": {
+        "label": "AAII 家庭股票配置比",
+        "value": 68.3,
+        "unit": "%",
+        "detail": "連續62個月高於均值61.5%；債券配置15.7%(-0.2pp)、現金配置16.0%(-0.6pp)",
+        "as_of": "2026-07",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於均值61.5%",
+        "note": "本次重新查證確認7月讀數68.3%仍為最新一期，數字與先前掃描相同，8月調查通常於9月初才公布"
+      }
+    },
+    "triggers": {
+      "vix_above_25": {
+        "label": "VIX 突破並站穩 >25",
+        "status": "14.64",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "fear_greed_drop": {
+        "label": "Fear & Greed >75 跌回 <50",
+        "status": "現值65，近期未見>75",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "margin_debt_3mo_decline": {
+        "label": "Margin Debt 連續3個月月減",
+        "status": "6月續創新高（相反）",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "hy_spread_above_450": {
+        "label": "HY Spread 擴張 >4.5%",
+        "status": "~271bps",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "ad_line_divergence": {
+        "label": "S&P 新高但 A/D Line 不創新高",
+        "status": "S&P維持8/13創下的收盤新高7,798.99，A/D Line精確累計值仍查無數字，質化廣度分析佐證參與度不足，維持warn",
+        "hit": "warn",
+        "horizon": "mid"
+      },
+      "bofa_bull_bear_above_8": {
+        "label": "BofA Bull & Bear >8.0",
+        "status": "9.7",
+        "hit": "yes",
+        "horizon": "mid"
+      },
+      "insider_below_017": {
+        "label": "Insider Buy/Sell <0.17",
+        "status": "0.23",
+        "hit": "no",
+        "horizon": "mid"
+      }
+    },
+    "top_signal": "本次下午重新掃描最重要的發現是修正了Renaissance IPO指標的重大誤判：SpaceX(US$750億)IPO實際已於2026年第二季完成並計入官方Q2統計（48件/$1048億，創2021年以來最大單季紀錄），並非先前四次掃描（8/7、8/13、8/14、8/17上午）所述「待Q3重新平衡才計入」——先前的敘述有誤，本次已更正。與此同時，BofA Bull & Bear Indicator仍維持9.7的極端讀數，正式賣出訊號與基金經理人現金水位跌破4%門檻持續有效；Buffett Indicator本次查得的版本落差進一步擴大至229.9–292%（新增244.4%、292%、250%、209.2%四個版本），Shiller CAPE本次查得Multpl最高讀數42.56，持續逼近1999–2000年歷史紀錄44.2；10Y-2Y殖利率曲線0.51%本次獲Seeking Alpha殖利率快照交叉驗證，可信度提高。A/D Line頂背離維持warn判斷不變，CBOE Put/Call Ratio本次新查得8/4的1.11/0.55版本落差，資料品質持續惡化。",
+    "data_conflicts": [
+      "【本次新增／修正】Renaissance IPO：發現SpaceX($750億)已於Q2 2026計入官方統計（48件/$1048億），而非先前四次掃描沿用的「待Q3重新平衡才計入」描述；「64件/$153億」的Q3數字因其「創2021年以來最大單季」敘述與Q2已創新紀錄矛盾，高度懷疑為誤植的2025年Q3舊資料，Q3 2026官方完整季報本次仍未發布",
+      "FINRA Margin Debt：GuruFocus官方頁面最新僅到2026年6月($1.502兆)；本次查得一篇文章聲稱「創紀錄$1.5兆、比率3.40」但未能確認對應月份，與先前「逼近7.0倍」描述存在明顯落差，屬不同計算基礎",
+      "Margin Debt/GDP：GuruFocus官方4.63%（歷史中位數2.38%），另查得「4.1%（50年中位數1.5%）」版本，計算基礎不同",
+      "CBOE Equity Put/Call Ratio：官方equity-only數字滯後至8/7(0.54)，滯後天數已達10天；本次另查得8/4存在1.11與0.55兩個互相矛盾的版本",
+      "Buffett Indicator：GuruFocus官方229.9%；本次另查得244.4%(GuruFocus另頁)、292%(currentmarketvaluation即時估算，8/12)、250%(官方Q1 2026)、209.2%(另一來源)，共4個新版本，落差本次進一步擴大至逾80個百分點",
+      "Shiller CAPE：本次查得Multpl 42.56、GuruFocus 42.18、另一來源41.2×，三者落差擴大至41.2–42.56，採用最高值42.56作參考",
+      "10Y-2Y殖利率利差：本次改由Seeking Alpha 8/14殖利率快照（10Y 4.68% / 2Y 4.17%）交叉驗證得0.51%，與前次FRED關聯來源數字一致，可信度提高",
+      "NAAIM Exposure Index：訂閱制生效後本次搜尋仍僅取得7/29免費資料，滯後天數已達19天",
+      "Insider Buy/Sell Ratio：整體市場數據滯後至2026-07月度，僅科技子項目更新至8月(0.12，未採用)",
+      "Conference Board LEI：滯後至2026-06月度數據，下次公布為2026-08-20",
+      "NYSE A/D Line：本次仍未能取得精確的8月累計淨家數；S&P維持8/13創下的收盤新高7,798.99，本次查得一篇質化廣度分析文章（近12個交易日平均僅約7日個股上漲）作為warn判斷的補充佐證，惟未附精確日期與淨家數"
+    ]
+  },
+  {
+    "scan_date": "2026-08-18",
+    "short_term": {
+      "vix": {
+        "label": "VIX",
+        "value": 15.21,
+        "unit": "",
+        "detail": "8/17(週一)收盤15.19(+6.60%，較週五2026年最低收盤14.25反彈)；8/18(今日)開盤14.98，盤中區間14.89–15.47，即時報15.21",
+        "as_of": "2026-08-18(盤中)",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": "<13自滿 / >25恐慌",
+        "note": "VIX已從8/14創下的2026年最低收盤14.25反彈逾6%，顯示短期波動度略有回溫，但仍遠低於25的恐慌閾值"
+      },
+      "fear_greed": {
+        "label": "CNN Fear & Greed",
+        "value": 65,
+        "unit": "",
+        "detail": "官方頁面本次搜尋仍未查得8/14後的精確更新數字，沿用8/14讀數65；本次另查得第三方鏡像網站(feargreedmeter.com)顯示61(較65下降4點)，多篇Benzinga報導（PPI數據後創新高、通膨數據前下跌）皆顯示指數持續處於Greed區間但均未附精確數字",
+        "as_of": "2026-08-14",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">75極端貪婪 / <25極端恐懼",
+        "note": "官方CNN頁面本次搜尋仍未更新至8/14後的精確數字；第三方鏡像61與官方沿用值65存在落差，僅作方向性觀察，不採用未經CNN官方確認的數字"
+      },
+      "aaii_sentiment": {
+        "label": "AAII 散戶情緒 (Bull/Bear)",
+        "value": -3.2,
+        "unit": "pp(多空差)",
+        "detail": "Bullish 34.7% / Neutral 27.4% / Bearish 37.9%（當週至8/12）",
+        "as_of": "2026-08-12(當週)",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": "多空差 >±20 為極端",
+        "note": "本次重新查證確認仍為最新一期讀數（週度資料，下一期預計8/19當週公布），數字與前次掃描相同，遠低於±20極端門檻"
+      },
+      "put_call_ratio": {
+        "label": "CBOE Equity Put/Call Ratio",
+        "value": 0.54,
+        "unit": "",
+        "as_of": "2026-08-07",
+        "detail": "本次搜尋仍未查得8/7後的每日更新數字，滯後天數已達11天；8/4另有1.11與0.55兩個互相矛盾的版本，本次仍未解決",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.5偏樂觀 / >0.7偏悲觀",
+        "note": "官方CBOE Equity Put/Call本次搜尋仍未查得8/7後的每日更新，滯後天數持續累積至11天，短期指標資料新鮮度問題未見改善"
+      },
+      "naaim": {
+        "label": "NAAIM Exposure Index",
+        "value": 79.7,
+        "unit": "",
+        "detail": "前值84.02",
+        "as_of": "2026-07-29",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">80過度樂觀",
+        "note": "2026-08起轉訂閱制後，本次搜尋仍僅取得7/29免費資料，滯後天數已達20天，數據新鮮度持續惡化"
+      }
+    },
+    "mid_term": {
+      "margin_debt": {
+        "label": "FINRA Margin Debt",
+        "value": 1.53,
+        "unit": "兆美元",
+        "detail": "6月增7.9%·年增51.5%（GuruFocus官方原始數值為$1,502,072百萬美元，即$1.502兆，兩者為同一數據不同呈現方式）",
+        "as_of": "2026-06",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "連3月減少為警訊",
+        "note": "本次搜尋再次確認GuruFocus官方最新僅到2026年6月，7月數據本次仍未正式公布"
+      },
+      "margin_debt_gdp": {
+        "label": "Margin Debt / GDP",
+        "value": 4.63,
+        "unit": "%",
+        "detail": "年增39.88%，歷史中位數2.38%，歷史新高",
+        "as_of": "2026-06",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於中位數2.38%",
+        "note": "本次搜尋仍未查得7月更新數字，沿用6月數據，數字與前次掃描相同"
+      },
+      "ipo_issuance": {
+        "label": "Renaissance IPO 發行量",
+        "value": 102,
+        "unit": "件(2026年迄今YTD，至8月中)",
+        "detail": "Q1 35件/$99億、Q2 48件/$1048億(含SpaceX $750億，已計入官方統計)；Q3(7-9月)官方完整季報截至本次掃描仍未發布",
+        "as_of": "2026(YTD至8月中)",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "IPO潮通常伴隨頭部",
+        "note": "本次重大確認：先前四次掃描反覆沿用、始終無法核實對應年份的「Q3 64件/$153億」數字，本次直接查證其原始報導明確標示為『2025年第三季(3Q25)』數據，證實先前掃描的懷疑成立——此數字與2026年完全無關，本次已徹底排除，YTD統計仍以官方102件為準"
+      },
+      "insider_buy_sell": {
+        "label": "Insider Buy/Sell Ratio",
+        "value": 0.23,
+        "unit": "",
+        "detail": "均值0.34，區間0.17–0.61，年增4.55%",
+        "as_of": "2026-07",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.17極端賣壓",
+        "note": "整體市場8月數據本次搜尋仍未公布；僅科技類股子項目8月讀數0.12（非整體市場，未採用），與先前掃描情況相同"
+      },
+      "bofa_bull_bear": {
+        "label": "BofA Bull & Bear Indicator",
+        "value": 9.7,
+        "unit": "",
+        "detail": "8/5攀升至9.7（前值9.4），為2021年以來最極端水位；基金經理人現金水位約3.6%，續處於4%警戒線下方",
+        "as_of": "2026-08(最新一期，8/5)",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">8.0觸發賣出訊號",
+        "note": "本次搜尋仍未發現本週有新一期更新，正式賣出訊號持續有效，數字與前次掃描相同"
+      },
+      "hy_oas_spread": {
+        "label": "ICE BofA US HY OAS Spread",
+        "value": 271,
+        "unit": "bps",
+        "detail": "另一鏡像來源govspending.org顯示2.71%(271bps)，兩者一致",
+        "as_of": "2026-08-12",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": ">450bps示警",
+        "note": "遠低於450bps警戒線，信用市場尚未定價系統性風險，判斷不變"
+      },
+      "ad_line": {
+        "label": "NYSE Advance/Decline Line",
+        "value": null,
+        "unit": "淨家數",
+        "as_of": "2026-08(無精確累計值)",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "S&P新高但A/D不創新高",
+        "note": "本次搜尋仍未查得精確的A/D Line累計淨家數；另查得8/12單日廣度數字：40.4%上漲／56.3%下跌，為8/7以來最弱單日廣度；同時S&P 500已從8/13歷史新高7,798.99連兩個交易日回落，8/17收盤7,745.06(-0.52%)，並非持續創新高狀態，「S&P新高但A/D不創新高」的嚴格觸發條件目前不完全成立，但廣度轉弱訊號仍在，維持warn"
+      }
+    },
+    "long_term": {
+      "buffett_indicator": {
+        "label": "Buffett Indicator",
+        "value": 240,
+        "unit": "%",
+        "as_of": "2026-08-17",
+        "detail": "GuruFocus官方頁面本次搜尋確認為每日更新機制，最新讀數240%(8/17)；另查得229.9%(較舊快照，8/8)、244.4%(GuruFocus另頁)、243%(buffettindicator.org，8/13)、292%(currentmarketvaluation即時估算，8/12)、250%(官方Q1 2026讀數)、209.2%(另一來源)，共6個版本並存",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">150%顯著高估",
+        "note": "本次改採GuruFocus本次明確標示8/17更新的240%作為主要讀數（較前次掃描沿用的229.9%更新更即時）；版本間落差本次持續存在，反映不同計算基礎（GNP vs GDP、即時估算vs官方季度）與資料時點差異，均列入data_conflicts"
+      },
+      "shiller_cape": {
+        "label": "Shiller CAPE / PE10",
+        "value": 41.96,
+        "unit": "",
+        "as_of": "2026-08",
+        "detail": "GuruFocus本次讀數41.96；另查得thetrading.tools顯示41.2×，範圍41.2–41.96（前次掃描曾查得Multpl最高42.56，本次未重新驗證）",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">30歷史高檔",
+        "note": "GuruFocus 41.96較長期均值32.47高出29.2%，續處於1881年以來98.9百分位的歷史高檔區間，仍逼近1999–2000年的44.2歷史高點"
+      },
+      "yield_curve_10y2y": {
+        "label": "10Y-2Y Treasury Yield Curve",
+        "value": 0.51,
+        "unit": "%",
+        "as_of": "2026-08-14",
+        "detail": "10年期4.68% / 2年期4.17%，約58百分位，正斜率持續走陡",
+        "signal": "green",
+        "riskDir": "down",
+        "threshold": "轉負為衰退警訊",
+        "note": "本次搜尋仍以FRED T10Y2Y序列8/14最新值為準，本次未查得8/14後的更新數字；曲線持續維持正斜率未倒掛"
+      },
+      "lei": {
+        "label": "Conference Board US LEI",
+        "value": 99.1,
+        "unit": "",
+        "detail": "月增-0.2%",
+        "as_of": "2026-06",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "連續下滑轉負為警訊",
+        "note": "本次確認7月數據仍未公布，數字與先前掃描相同，下次公布為2026-08-20（2天後）"
+      },
+      "aaii_allocation": {
+        "label": "AAII 家庭股票配置比",
+        "value": 68.3,
+        "unit": "%",
+        "detail": "連續62個月高於均值61.5%；債券配置15.7%(-0.2pp)、現金配置16.0%(-0.6pp)",
+        "as_of": "2026-07",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於均值61.5%",
+        "note": "本次重新查證確認7月讀數68.3%仍為最新一期；本次另查得一則「67.3%/連續63個月」版本，經核實研判為搜尋引擎索引到的往年同名文章模板、非2026年8月當期數據，未採用，8月調查通常於9月初才公布"
+      }
+    },
+    "triggers": {
+      "vix_above_25": {
+        "label": "VIX 突破並站穩 >25",
+        "status": "15.21(盤中)/15.19(8/17收盤)",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "fear_greed_drop": {
+        "label": "Fear & Greed >75 跌回 <50",
+        "status": "現值65(另有61版本)，近期未見>75",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "margin_debt_3mo_decline": {
+        "label": "Margin Debt 連續3個月月減",
+        "status": "6月續增7.9%（方向相反）",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "hy_spread_above_450": {
+        "label": "HY Spread 擴張 >4.5%",
+        "status": "~271bps",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "ad_line_divergence": {
+        "label": "S&P 新高但 A/D Line 不創新高",
+        "status": "S&P已從8/13新高7,798.99連兩日回落，8/17收盤7,745.06(-0.52%)，非續創新高狀態；A/D精確值仍查無，8/12單日廣度40.4%漲/56.3%跌為8/7以來最弱，廣度疲弱佐證仍在，維持warn",
+        "hit": "warn",
+        "horizon": "mid"
+      },
+      "bofa_bull_bear_above_8": {
+        "label": "BofA Bull & Bear >8.0",
+        "status": "9.7",
+        "hit": "yes",
+        "horizon": "mid"
+      },
+      "insider_below_017": {
+        "label": "Insider Buy/Sell <0.17",
+        "status": "0.23",
+        "hit": "no",
+        "horizon": "mid"
+      }
+    },
+    "top_signal": "本次掃描最重要的確認：先前四次掃描反覆沿用、始終無法核實對應年份的Renaissance IPO「Q3 64件/$153億」數字，本次直接查證其原始報導明確標示為2025年第三季(3Q25)數據，證實先前掃描的懷疑成立——此數字與2026年完全無關，應徹底排除。與此同時，市場出現短期轉折跡象：VIX已從8/14創下的2026年最低收盤14.25反彈至8/17收盤15.19(+6.60%)，8/18盤中維持在15.21附近；S&P 500也從8/13創下的歷史新高7,798.99連兩個交易日回落，8/17收盤7,745.06(-0.52%)，暫止住連續創高的態勢，搭配8/12已浮現的單日廣度轉弱(40.4%漲/56.3%跌，為8/7以來最弱)，短期做多動能出現降溫訊號。長期估值方面，Buffett Indicator經GuruFocus每日更新確認已達240%(8/17)，較先前主要引用的229.9%進一步惡化；BofA Bull & Bear Indicator仍維持9.7的正式賣出訊號；Shiller CAPE本次讀數41.96，持續處於歷史高檔區間。",
+    "data_conflicts": [
+      "【本次確認】Renaissance IPO Q3「64件/$153億」數字：本次直接查證確認其來源明確標示為2025年第三季(3Q25)數據，與2026年無關，先前四次掃描的懷疑本次獲得證實，應徹底排除此數字，不應再與2026年Q3混淆",
+      "FINRA Margin Debt：GuruFocus官方最新僅到2026年6月($1.502兆/$1.53兆兩種呈現方式並存)，7月數據本次搜尋仍未公布",
+      "Margin Debt/GDP：4.63%(GuruFocus官方，中位數2.38%)，本次搜尋未再查得先前掃描出現的「4.1%(中位數1.5%)」替代版本，惟過去多次出現不同計算基礎版本，維持觀察",
+      "CBOE Equity Put/Call Ratio：官方數字滯後至8/7(0.54)，滯後天數已達11天；8/4存在1.11與0.55兩個互相矛盾的版本本次仍未解決",
+      "Buffett Indicator：GuruFocus官方頁面本次確認每日更新至240%(8/17)；另查得229.9%(較舊快照)、244.4%(GuruFocus另頁)、243%(buffettindicator.org,8/13)、292%(currentmarketvaluation即時估算,8/12)、250%(官方Q1)、209.2%(另一來源)，共6個版本並存，落差持續擴大",
+      "Shiller CAPE：本次查得GuruFocus 41.96(8月)、thetrading.tools 41.2×，範圍41.2–41.96；先前掃描曾查得Multpl最高42.56本次未重新驗證",
+      "NYSE A/D Line：本次仍未取得精確累計淨家數；另查得8/12單日廣度數字(40.4%漲/56.3%跌，為8/7以來最弱單日)作補充佐證；S&P 500已從8/13新高回落，8/17收盤7,745.06(-0.52%)，非續創新高狀態，「S&P新高但A/D不創新高」的嚴格觸發條件目前不完全成立，惟廣度疲弱訊號仍在，維持warn",
+      "NAAIM Exposure Index：訂閱制生效後本次搜尋仍僅取得7/29免費資料，滯後天數已達20天",
+      "Insider Buy/Sell Ratio：整體市場數據滯後至2026-07月度，僅科技子項目更新至8月(0.12，未採用)",
+      "Conference Board LEI：滯後至2026-06月度數據，下次公布為2026-08-20(2天後)",
+      "CNN Fear & Greed Index：官方頁面本次搜尋仍未查得8/14後的精確更新數字，第三方鏡像網站(feargreedmeter.com)顯示61(較65下降4點)，與官方沿用值65存在落差，多篇Benzinga報導佐證指數持續處於Greed區間但均未附精確數字",
+      "AAII 家庭股票配置比：本次搜尋另查得一則「67.3%/連續63個月」版本，經核實研判為往年同名文章模板被搜尋引擎索引錯置、非2026年8月當期數據，未採用，本次仍以7月官方讀數68.3%為準"
+    ]
+  },
+  {
+    "scan_date": "2026-08-19",
+    "short_term": {
+      "vix": {
+        "label": "VIX",
+        "value": 15.84,
+        "unit": "",
+        "detail": "8/18(週二)收盤15.84(+4.28%，較8/17收盤15.19續升，兩個交易日累計自8/14低點14.25反彈逾11%)；本次搜尋另出現「8/19盤中15.19」的結果，經核實為8/17舊資料被搜尋引擎重複索引，非8/19當日真實數字，未採用",
+        "as_of": "2026-08-18",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": "<13自滿 / >25恐慌",
+        "note": "VIX連兩個交易日走升(8/17 15.19→8/18 15.84)，波動度回溫趨勢較8/18掃描時更明確，但仍遠低於25的恐慌閾值"
+      },
+      "fear_greed": {
+        "label": "CNN Fear & Greed",
+        "value": 59,
+        "unit": "",
+        "detail": "多篇Benzinga報導確認8/18讀數59，較8/14沿用值65續降6點，反映S&P連兩日下跌後市場情緒降溫；官方CNN頁面本次搜尋仍未直接查得帶時間戳的獨立確認頁面，59為第三方財經媒體引述之數字",
+        "as_of": "2026-08-18",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">75極端貪婪 / <25極端恐懼",
+        "note": "指數持續處於Greed區間但已從8/14的65降至8/18的59，方向與VIX回升、S&P回落互相印證"
+      },
+      "aaii_sentiment": {
+        "label": "AAII 散戶情緒 (Bull/Bear)",
+        "value": -3.2,
+        "unit": "pp(多空差)",
+        "detail": "Bullish 34.7% / Neutral 27.4% / Bearish 37.9%（當週至8/12）",
+        "as_of": "2026-08-12(當週)",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": "多空差 >±20 為極端",
+        "note": "本次搜尋確認當週(至8/19)最新一期尚未公布，仍為8/12當週數字，遠低於±20極端門檻"
+      },
+      "put_call_ratio": {
+        "label": "CBOE Equity Put/Call Ratio",
+        "value": 0.54,
+        "unit": "",
+        "as_of": "2026-08-07",
+        "detail": "本次搜尋仍未查得8/7後的每日更新數字，滯後天數已達12天；8/4另有1.11與0.55兩個互相矛盾的版本，本次仍未解決",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.5偏樂觀 / >0.7偏悲觀",
+        "note": "官方CBOE Equity Put/Call本次搜尋仍未查得8/7後的每日更新，滯後天數持續累積，短期指標資料新鮮度問題未見改善"
+      },
+      "naaim": {
+        "label": "NAAIM Exposure Index",
+        "value": 79.7,
+        "unit": "",
+        "detail": "前值84.02",
+        "as_of": "2026-07-29",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">80過度樂觀",
+        "note": "2026-08起轉訂閱制後，本次搜尋仍僅取得7/29免費資料，滯後天數已達約21天，數據新鮮度持續惡化"
+      }
+    },
+    "mid_term": {
+      "margin_debt": {
+        "label": "FINRA Margin Debt",
+        "value": 1.42,
+        "unit": "兆美元",
+        "detail": "GuruFocus官方頁面本次搜尋顯示7月數值降至$1,417,225百萬美元(約$1.417兆)，較6月$1.502兆月減約5.7%，為近期首次出現的單月下滑；但同時仍有媒體報導稱7月「再創$1.53兆新高」，方向與GuruFocus數字完全相反，本次未能核實何者為官方最終定案數字",
+        "as_of": "2026-07",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "連3月減少為警訊",
+        "note": "本次為近期掃描首次出現月減跡象(若GuruFocus數字屬實)，惟僅1個月尚未達「連續3個月月減」的觸發門檻，且與另一路媒體數字方向矛盾，須持續觀察下月數據以確認趨勢"
+      },
+      "margin_debt_gdp": {
+        "label": "Margin Debt / GDP",
+        "value": 4.63,
+        "unit": "%",
+        "detail": "年增39.88%，歷史中位數2.38%，歷史新高",
+        "as_of": "2026-06",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於中位數2.38%",
+        "note": "本次搜尋仍未查得7月更新數字，沿用6月數據，數字與前次掃描相同"
+      },
+      "ipo_issuance": {
+        "label": "Renaissance IPO 發行量",
+        "value": 102,
+        "unit": "件(2026年迄今YTD，至8月中)",
+        "detail": "Q1 35件/$99億、Q2 48件/$1048億(含SpaceX $750億，已計入官方統計)；Q3(7-9月)官方完整季報截至本次掃描仍未發布",
+        "as_of": "2026(YTD至8月中)",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "IPO潮通常伴隨頭部",
+        "note": "本次搜尋再次出現「Q3 64件/$153億」數字(先前四次掃描已查證為2025年3Q25舊資料，非2026年)，以及另一則新的「YTD約200件/$376億」數字，經核對與官方102件YTD落差過大，研判同樣為搜尋引擎索引到的非2026年當期資料，兩者均未採用，YTD仍以官方102件為準"
+      },
+      "insider_buy_sell": {
+        "label": "Insider Buy/Sell Ratio",
+        "value": 0.23,
+        "unit": "",
+        "detail": "均值0.34，區間0.17–0.61，年增4.55%",
+        "as_of": "2026-07",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.17極端賣壓",
+        "note": "整體市場8月數據本次搜尋仍未公布；僅科技類股子項目8月讀數0.12（非整體市場，未採用），與先前掃描情況相同"
+      },
+      "bofa_bull_bear": {
+        "label": "BofA Bull & Bear Indicator",
+        "value": 9.7,
+        "unit": "",
+        "detail": "8/5攀升至9.7（前值9.4），為2021年以來最極端水位；基金經理人現金水位約3.6%，續處於4%警戒線下方",
+        "as_of": "2026-08(最新一期，8/5)",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">8.0觸發賣出訊號",
+        "note": "本次搜尋仍未發現本週有新一期更新，正式賣出訊號持續有效，數字與前次掃描相同"
+      },
+      "hy_oas_spread": {
+        "label": "ICE BofA US HY OAS Spread",
+        "value": 271,
+        "unit": "bps",
+        "detail": "另一鏡像來源govspending.org顯示2.71%(271bps)，兩者一致",
+        "as_of": "2026-08-13",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": ">450bps示警",
+        "note": "遠低於450bps警戒線，信用市場尚未定價系統性風險，判斷不變，數字與前次掃描相同"
+      },
+      "ad_line": {
+        "label": "NYSE Advance/Decline Line",
+        "value": null,
+        "unit": "淨家數",
+        "as_of": "2026-08(無精確累計值)",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "S&P新高但A/D不創新高",
+        "note": "本次搜尋仍未查得精確的A/D Line累計淨家數；另查得研究指出7月A/D Line曾隨S&P創12個月新高同步確認(歷史上此型態8-12月平均報酬+6.5%，優於未確認時的-1.1%)，屬正面訊號；惟目前S&P已連兩個交易日自8/13新高回落(8/17收盤7,745.06、8/18收盤約7,703)，並非續創新高狀態，「S&P新高但A/D不創新高」的嚴格觸發條件目前不成立，維持warn觀察"
+      }
+    },
+    "long_term": {
+      "buffett_indicator": {
+        "label": "Buffett Indicator",
+        "value": 240,
+        "unit": "%",
+        "as_of": "2026-08-18",
+        "detail": "GuruFocus官方頁面本次搜尋確認每日更新機制持續至8/18維持240%；另查得229.9%(較舊快照,8/6)、244.4%(GuruFocus另頁)、243%(buffettindicator.org,8/13)、292%(currentmarketvaluation即時估算,8/12)、250%(官方Q1 2026讀數)、209.2%(另一來源)，共6個版本並存",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">150%顯著高估",
+        "note": "本次確認GuruFocus 240%讀數已延續至8/18，較8/6的229.9%持續墊高；版本間落差本次持續存在，反映不同計算基礎（GNP vs GDP、即時估算vs官方季度）與資料時點差異，均列入data_conflicts"
+      },
+      "shiller_cape": {
+        "label": "Shiller CAPE / PE10",
+        "value": 41.96,
+        "unit": "",
+        "as_of": "2026-08",
+        "detail": "GuruFocus讀數41.96(本次未查得更新，沿用前次掃描數字)；另查得thetrading.tools顯示41.2×(較前一期40.6×上升)，範圍41.2–41.96",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">30歷史高檔",
+        "note": "GuruFocus 41.96較長期均值32.47高出29.2%，續處於1881年以來98.9百分位的歷史高檔區間，仍逼近1999–2000年的44.2歷史高點"
+      },
+      "yield_curve_10y2y": {
+        "label": "10Y-2Y Treasury Yield Curve",
+        "value": 0.51,
+        "unit": "%",
+        "as_of": "2026-08-14",
+        "detail": "10年期4.68%/2年期4.17%(8/14)；本次另查得Trading Economics顯示10年期殖利率已於8/18升至4.73%，惟對應的2年期數字與FRED T10Y2Y官方利差序列本次搜尋均未查得8/14後的更新，故未自行推算新利差，維持8/14官方數字",
+        "signal": "green",
+        "riskDir": "down",
+        "threshold": "轉負為衰退警訊",
+        "note": "曲線持續維持正斜率未倒掛；10年期殖利率走升值得留意，但利差官方數字尚未更新，不代入推估值"
+      },
+      "lei": {
+        "label": "Conference Board US LEI",
+        "value": 99.1,
+        "unit": "",
+        "detail": "月增-0.2%",
+        "as_of": "2026-06",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "連續下滑轉負為警訊",
+        "note": "本次確認7月數據仍未公布，數字與先前掃描相同，下次公布為2026-08-20（明日）"
+      },
+      "aaii_allocation": {
+        "label": "AAII 家庭股票配置比",
+        "value": 68.3,
+        "unit": "%",
+        "detail": "連續62個月高於均值61.5%；債券配置15.7%(-0.2pp)、現金配置16.0%(-0.6pp)",
+        "as_of": "2026-07",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於均值61.5%",
+        "note": "本次以aaii.com官方文章標題重新查證確認7月讀數68.3%/62個月版本無誤；另兩則查得的「67.3%/63個月」與「70.4%/74個月」版本經核實研判均為搜尋引擎索引到的往年同名文章模板、非2026年8月當期數據，均未採用"
+      }
+    },
+    "triggers": {
+      "vix_above_25": {
+        "label": "VIX 突破並站穩 >25",
+        "status": "15.84(8/18收盤)",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "fear_greed_drop": {
+        "label": "Fear & Greed >75 跌回 <50",
+        "status": "現值59，近期未見>75",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "margin_debt_3mo_decline": {
+        "label": "Margin Debt 連續3個月月減",
+        "status": "若GuruFocus 7月數字屬實則為首月下滑(6月$1.502兆→7月$1.417兆)，惟僅1個月且與另一媒體版本矛盾，未達3個月門檻",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "hy_spread_above_450": {
+        "label": "HY Spread 擴張 >4.5%",
+        "status": "~271bps",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "ad_line_divergence": {
+        "label": "S&P 新高但 A/D Line 不創新高",
+        "status": "S&P已從8/13新高7,798.99連兩日回落(8/17收盤7,745.06、8/18收盤約7,703)，非續創新高狀態；A/D精確值仍查無，7月曾與S&P同步創12個月新高，惟目前非新高狀態，維持warn",
+        "hit": "warn",
+        "horizon": "mid"
+      },
+      "bofa_bull_bear_above_8": {
+        "label": "BofA Bull & Bear >8.0",
+        "status": "9.7",
+        "hit": "yes",
+        "horizon": "mid"
+      },
+      "insider_below_017": {
+        "label": "Insider Buy/Sell <0.17",
+        "status": "0.23",
+        "hit": "no",
+        "horizon": "mid"
+      }
+    },
+    "top_signal": "本次掃描最值得關注的新發現：GuruFocus官方頁面顯示FINRA Margin Debt 7月數值降至約$1.417兆(較6月$1.502兆的紀錄高點月減約5.7%)，為近期掃描首次出現的槓桿降溫跡象——但同時仍有媒體報導稱7月「再創$1.53兆新高」，兩路數字方向完全相反，本次未能核實定案版本，須待8月數據公布後才能確認趨勢是否真正反轉，僅1個月降幅也遠不足以觸發「連續3個月月減」的門檻。與此同時，短期波動度回溫更趨明確：VIX連兩個交易日走升，8/17收盤15.19、8/18收盤15.84(+4.28%)，累計自8/14低點反彈逾11%；S&P 500也連兩個交易日自8/13歷史新高7,798.99回落，8/18收盤約7,703；CNN Fear & Greed同步從8/14的65降至8/18的59。長期估值方面，Buffett Indicator經GuruFocus確認240%的讀數已延續至8/18；BofA Bull & Bear Indicator仍維持9.7的正式賣出訊號；Shiller CAPE維持41.96的歷史高檔讀數。",
+    "data_conflicts": [
+      "【本次新增重大疑點】FINRA Margin Debt：GuruFocus官方頁面顯示7月降至$1.417兆(較6月$1.502兆月減5.7%)，但另有媒體報導稱7月「再創$1.53兆新高」，兩者方向完全相反，本次未能核實何者為最終官方定案數字，須待後續掃描確認",
+      "Margin Debt/GDP：4.63%(GuruFocus官方，中位數2.38%)，本次搜尋未再查得先前掃描出現的「4.1%(中位數1.5%)」替代版本，惟過去多次出現不同計算基礎版本，維持觀察",
+      "Renaissance IPO：本次再次出現先前已查證為2025年3Q25舊資料的「Q3 64件/$153億」數字，另新增一則與官方102件YTD差距過大的「約200件/$376億」數字，經核實研判同樣非2026年當期資料，兩者均未採用",
+      "CBOE Equity Put/Call Ratio：官方數字滯後至8/7(0.54)，滯後天數已達12天；8/4存在1.11與0.55兩個互相矛盾的版本本次仍未解決",
+      "Buffett Indicator：GuruFocus官方頁面本次確認240%讀數已延續至8/18；另查得229.9%(較舊快照)、244.4%(GuruFocus另頁)、243%(buffettindicator.org,8/13)、292%(currentmarketvaluation即時估算,8/12)、250%(官方Q1)、209.2%(另一來源)，共6個版本並存，落差持續存在",
+      "Shiller CAPE：本次查得GuruFocus 41.96(沿用，本次未查得更新)、thetrading.tools 41.2×(較前期40.6×上升)，範圍41.2–41.96",
+      "10Y-2Y殖利率曲線：Trading Economics顯示10年期殖利率已於8/18升至4.73%，但FRED T10Y2Y官方利差序列本次搜尋仍未查得8/14後的更新，故未自行推算新利差，僅列為觀察重點",
+      "NYSE A/D Line：本次仍未取得精確累計淨家數；另查得研究指出7月曾與S&P同步創12個月新高(正面訊號)，惟S&P已連兩日自8/13新高回落，「S&P新高但A/D不創新高」的嚴格觸發條件目前不成立，維持warn",
+      "NAAIM Exposure Index：訂閱制生效後本次搜尋仍僅取得7/29免費資料，滯後天數已達約21天",
+      "Insider Buy/Sell Ratio：整體市場數據滯後至2026-07月度，僅科技子項目更新至8月(0.12，未採用)",
+      "Conference Board LEI：滯後至2026-06月度數據，下次公布為2026-08-20(明日)",
+      "CNN Fear & Greed Index：官方頁面本次搜尋仍未直接查得帶時間戳的獨立確認頁面，59為Benzinga等第三方財經媒體引述之數字，較8/14官方沿用值65下降6點",
+      "AAII 家庭股票配置比：本次搜尋另出現兩則版本，「67.3%/63個月」與新查得的「70.4%/74個月」，經核實研判均為搜尋引擎索引到的往年同名文章模板、非2026年8月當期數據，均未採用，仍以aaii.com官方7月讀數68.3%/62個月為準"
+    ]
+  },
+  {
+    "scan_date": "2026-08-20",
+    "short_term": {
+      "vix": {
+        "label": "VIX",
+        "value": 14.89,
+        "unit": "",
+        "detail": "8/19(週三)收盤14.89(-6.00%，較8/18收盤15.84顯著回落)，因美國財政部宣布加碼買回長天期公債、殖利率明顯下滑，帶動VIX同步降溫，一舉收復8/17–8/18連兩日的漲幅",
+        "as_of": "2026-08-19",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": "<13自滿 / >25恐慌",
+        "note": "VIX單日重挫逾6%，此前連兩個交易日的波動度回溫趨勢本次逆轉，反映財政部買回操作紓解殖利率壓力後市場恐慌情緒顯著降溫，仍遠低於25的恐慌閾值，也未跌破13的自滿警戒"
+      },
+      "fear_greed": {
+        "label": "CNN Fear & Greed",
+        "value": 56,
+        "unit": "",
+        "detail": "多篇財經媒體引述之8/19數字為56(貪婪區間)，較8/18的59續降3點；另查得一則Benzinga報導提及Fear & Greed轉入中性區，惟該文內容(晶片股拋售、殖利率多日創高)與8/18(週二)行情描述相符，經核實研判為8/18舊文重複索引、非8/19當日新數字，未採用；CNN官方頁面本次搜尋仍未查得帶時間戳的獨立確認頁面",
+        "as_of": "2026-08-19",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">75極端貪婪 / <25極端恐懼",
+        "note": "指數連續第三個交易日下滑(65→59→56)，仍處Greed區間但持續降溫；方向與VIX同日大幅回落出現罕見背離(VIX降代表恐慌情緒消退，Fear&Greed卻續降)，可能反映指數子項目更新時點落差，建議下次掃描持續追蹤"
+      },
+      "aaii_sentiment": {
+        "label": "AAII 散戶情緒 (Bull/Bear)",
+        "value": -3.2,
+        "unit": "pp(多空差)",
+        "detail": "Bullish 34.7% / Neutral 27.4% / Bearish 37.9%（當週至8/12）",
+        "as_of": "2026-08-12(當週)",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": "多空差 >±20 為極端",
+        "note": "本次搜尋出現標註「當週(至8/19)」的摘要文字與8/12當週數字完全相同，研判官方最新一期(通常週四公布)截至掃描時間可能尚未正式發布或未被索引，暫維持8/12當週數字，遠低於±20極端門檻"
+      },
+      "put_call_ratio": {
+        "label": "CBOE Equity Put/Call Ratio",
+        "value": 0.65,
+        "unit": "",
+        "as_of": "2026-08-17",
+        "detail": "CBOE官方數字更新至8/17，滯後天數由前次掃描的12天縮短為3天；當日CBOE Total 0.92(9日均值0.84，處近期區間23百分位、偏複製)、Equity 0.65、Index 1.03；8/4另有1.11與0.55兩個互相矛盾的版本本次仍未解決",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.5偏樂觀 / >0.7偏悲觀",
+        "note": "本次搜尋資料新鮮度較前次明顯改善，Equity Put/Call 0.65處於0.5–0.7中性區間，尚未觸及任一端極值"
+      },
+      "naaim": {
+        "label": "NAAIM Exposure Index",
+        "value": 79.7,
+        "unit": "",
+        "detail": "前值84.02",
+        "as_of": "2026-07-29",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">80過度樂觀",
+        "note": "2026-08起轉訂閱制後，本次搜尋仍僅取得7/29免費資料，滯後天數已達約22天，數據新鮮度持續惡化，與前次掃描相同"
+      }
+    },
+    "mid_term": {
+      "margin_debt": {
+        "label": "FINRA Margin Debt",
+        "value": 1.42,
+        "unit": "兆美元",
+        "detail": "GuruFocus官方頁面本次搜尋確認7月數值維持$1,417,225百萬美元(約$1.417兆)，年增38.6%，較6月$1.502兆月減約5.7%；同時AdvisorPerspectives/Kalkine等媒體仍報導稱「創$1.53兆新高」，經核實部分報導所指為6月數字(與GuruFocus 6月$1.502兆量級接近，屬不同資料源估算差異)，但亦有明確標註7月的版本與GuruFocus 7月數字方向相反，本次仍未能徹底核實何者為官方定案數字",
+        "as_of": "2026-07",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "連3月減少為警訊",
+        "note": "數字與前次掃描相同，僅1個月降幅尚未達「連續3個月月減」門檻，且與部分媒體版本存在方向矛盾，須持續觀察下月數據"
+      },
+      "margin_debt_gdp": {
+        "label": "Margin Debt / GDP",
+        "value": 4.63,
+        "unit": "%",
+        "detail": "年增39.88%，歷史中位數2.38%，歷史新高",
+        "as_of": "2026-06",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於中位數2.38%",
+        "note": "本次搜尋仍未查得7月更新數字，沿用6月數據，與前次掃描相同"
+      },
+      "ipo_issuance": {
+        "label": "Renaissance IPO 發行量",
+        "value": 103,
+        "unit": "件(2026年迄今YTD，至8月中)",
+        "detail": "Renaissance Capital官方Stats頁面本次直接查證更新：YTD 103件IPO定價(較2025年同期減少24.8%)、募資總額$1458億(較去年同期大增544.1%)、另有159件已申報；官方頁面本次仍未提供Q3單季拆分數字",
+        "as_of": "2026(YTD至8月中)",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "IPO潮通常伴隨頭部",
+        "note": "本次官方頁面確認YTD件數由102件增至103件、募資總額由Q2累計的$1048億跳升至YTD $1458億，反映Q3持續有大型IPO掛牌；先前多次查證為2025年舊資料的「Q3 64件/$153億」及研判非當期的「約200件/$376億」兩版本本次未再出現"
+      },
+      "insider_buy_sell": {
+        "label": "Insider Buy/Sell Ratio",
+        "value": 0.23,
+        "unit": "",
+        "detail": "均值0.34，區間0.17–0.61，年增4.55%",
+        "as_of": "2026-07",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.17極端賣壓",
+        "note": "整體市場8月數據本次搜尋仍未公布；僅科技類股子項目8月讀數0.12（非整體市場，未採用），與先前掃描情況相同"
+      },
+      "bofa_bull_bear": {
+        "label": "BofA Bull & Bear Indicator",
+        "value": 9.7,
+        "unit": "",
+        "detail": "8/5攀升至9.7（前值9.4），為2021年以來最極端水位；基金經理人現金水位約3.6%，續處於4%警戒線下方",
+        "as_of": "2026-08(最新一期，8/5)",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">8.0觸發賣出訊號",
+        "note": "本次搜尋仍未發現本週有新一期更新，正式賣出訊號持續有效，數字與前次掃描相同"
+      },
+      "hy_oas_spread": {
+        "label": "ICE BofA US HY OAS Spread",
+        "value": 271,
+        "unit": "bps",
+        "detail": "govspending.org鏡像來源同步顯示2.71%(271bps)，兩者一致",
+        "as_of": "2026-08-13",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": ">450bps示警",
+        "note": "本次搜尋未查得8/13後的更新，遠低於450bps警戒線，信用市場尚未定價系統性風險，判斷不變，數字與前次掃描相同"
+      },
+      "ad_line": {
+        "label": "NYSE Advance/Decline Line",
+        "value": null,
+        "unit": "淨家數",
+        "as_of": "2026-08(無精確累計值)",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "S&P新高但A/D不創新高",
+        "note": "S&P 500於8/19收在7,707.98(較8/18約7,703小幅回升0.21%)，仍較8/13歷史收盤新高7,798.99低約1.17%，非續創新高狀態；本次仍未查得精確的A/D Line累計淨家數，「S&P新高但A/D不創新高」的嚴格觸發條件目前仍不成立，維持warn觀察，與前次掃描判斷一致"
+      }
+    },
+    "long_term": {
+      "buffett_indicator": {
+        "label": "Buffett Indicator",
+        "value": 240,
+        "unit": "%",
+        "as_of": "2026-08-18",
+        "detail": "GuruFocus官方頁面本次搜尋仍顯示每日更新機制持續至8/18維持240%的歷史新高讀數；另查得229.9%(較舊快照,8/6)、244.4%(GuruFocus另頁)、243%(buffettindicator.org,8/13)、292%(currentmarketvaluation即時估算,8/12)、250%(官方Q1 2026讀數)、209.2%(另一來源)，共6個版本並存",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">150%顯著高估",
+        "note": "本次未查得8/18之後的更新，數字與前次掃描相同；版本間落差持續存在，反映不同計算基礎（GNP vs GDP、即時估算vs官方季度）與資料時點差異，均列入data_conflicts"
+      },
+      "shiller_cape": {
+        "label": "Shiller CAPE / PE10",
+        "value": 41.72,
+        "unit": "",
+        "as_of": "2026-08",
+        "detail": "GuruFocus本次搜尋顯示更新為41.72(較前次掃描沿用的41.96下降)；另查得thetrading.tools顯示41.2×(與前次掃描相同)，兩來源落差由0.76縮小至0.52",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">30歷史高檔",
+        "note": "GuruFocus 41.72較長期均值32.47高出約28.5%，續處於1881年以來98百分位以上的歷史高檔區間，仍逼近1999–2000年的44.2歷史高點；本次為近期掃描首次觀察到GuruFocus讀數下修"
+      },
+      "yield_curve_10y2y": {
+        "label": "10Y-2Y Treasury Yield Curve",
+        "value": 0.51,
+        "unit": "%",
+        "as_of": "2026-08-14",
+        "detail": "FRED T10Y2Y官方利差序列本次搜尋仍未查得8/14後的更新，維持沿用；個別公債殖利率本次查得8/19的10年期4.637%(較8/18的4.706%回落，因財政部加碼買回長債)、2年期最新收盤約4.175%，兩者相減隱含利差約46bps，惟因兩腳資料非同一官方序列同步更新，本次仍不自行推算代入新利差值",
+        "signal": "green",
+        "riskDir": "down",
+        "threshold": "轉負為衰退警訊",
+        "note": "曲線持續維持正斜率未倒掛；10年期殖利率因財政部買回操作於8/19明顯回落，殖利率曲線走勢待官方利差序列更新後才能確認，本次維持8/14官方數字保守處理"
+      },
+      "lei": {
+        "label": "Conference Board US LEI",
+        "value": 99.1,
+        "unit": "",
+        "detail": "月增-0.2%",
+        "as_of": "2026-06",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "連續下滑轉負為警訊",
+        "note": "Conference Board官方公告7月數據將於今日(2026-08-20)美東上午10點（台北時間晚間10點）發布，本次掃描執行時間點早於發布時刻，故仍沿用6月數字，非資料遺漏"
+      },
+      "aaii_allocation": {
+        "label": "AAII 家庭股票配置比",
+        "value": 68.3,
+        "unit": "%",
+        "detail": "連續62個月高於均值61.5%；債券配置15.7%(-0.2pp)、現金配置16.0%(-0.6pp)",
+        "as_of": "2026-07",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於均值61.5%",
+        "note": "本次搜尋仍持續出現「70.4%/74個月」與「67.3%/63個月」兩個替代版本，經核實研判均為搜尋引擎索引到的往年同名文章模板、非2026年7月當期數據，均未採用，仍以aaii.com官方7月讀數68.3%/62個月為準，與前次掃描相同"
+      }
+    },
+    "triggers": {
+      "vix_above_25": {
+        "label": "VIX 突破並站穩 >25",
+        "status": "14.89(8/19收盤，較8/18下跌6.00%)",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "fear_greed_drop": {
+        "label": "Fear & Greed >75 跌回 <50",
+        "status": "現值56，近期未見>75紀錄",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "margin_debt_3mo_decline": {
+        "label": "Margin Debt 連續3個月月減",
+        "status": "GuruFocus 7月數字若屬實為首月下滑(6月$1.502兆→7月$1.417兆)，惟僅1個月且與部分媒體「$1.53兆新高」版本矛盾，未達3個月門檻",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "hy_spread_above_450": {
+        "label": "HY Spread 擴張 >4.5%",
+        "status": "~271bps",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "ad_line_divergence": {
+        "label": "S&P 新高但 A/D Line 不創新高",
+        "status": "S&P 8/19收7,707.98，較8/13歷史新高7,798.99低約1.17%，非續創新高狀態；A/D精確值仍查無，維持warn",
+        "hit": "warn",
+        "horizon": "mid"
+      },
+      "bofa_bull_bear_above_8": {
+        "label": "BofA Bull & Bear >8.0",
+        "status": "9.7",
+        "hit": "yes",
+        "horizon": "mid"
+      },
+      "insider_below_017": {
+        "label": "Insider Buy/Sell <0.17",
+        "status": "0.23",
+        "hit": "no",
+        "horizon": "mid"
+      }
+    },
+    "top_signal": "本次掃描最值得關注的訊號是短期波動度出現急速逆轉：美國財政部8/19宣布加碼買回長天期公債，帶動10年期殖利率由8/18的4.706%回落至4.637%，VIX同步重挫6.00%至14.89(自8/18的15.84連兩日漲勢中反轉)，S&P 500也隨之從8/18收盤約7,703小幅回升至8/19的7,707.98(+0.21%)，惟仍較8/13的歷史新高7,798.99低約1.17%。值得留意的是，CNN Fear & Greed Index並未同步跟隨VIX回落而回溫，反而續降至56(較8/18的59再降3點)，與VIX方向出現罕見背離，須持續觀察是否僅為情緒指數子項目更新時點落差所致。中期方面，Renaissance IPO官方頁面本次確認YTD募資總額由Q2的$1048億大幅跳升至$1458億(103件)，顯示Q3仍有大型IPO持續掛牌，IPO過熱訊號未見降溫；BofA Bull & Bear Indicator維持9.7的正式賣出訊號，Margin Debt潛在月減跡象仍待下月數據核實方向。長期方面，Shiller CAPE本次出現近期掃描首次下修，GuruFocus讀數由41.96降至41.72，惟仍遠高於30的歷史高檔閾值；Buffett Indicator持續維持240%的歷史新高讀數。",
+    "data_conflicts": [
+      "FINRA Margin Debt：GuruFocus官方頁面顯示7月維持$1.417兆(較6月$1.502兆月減5.7%)，但AdvisorPerspectives/Kalkine等媒體仍報導「創$1.53兆新高」，經核實部分指6月數字、部分明確標註7月，方向仍與GuruFocus 7月數字矛盾，本次未能核實何者為最終官方定案數字",
+      "Margin Debt/GDP：4.63%(GuruFocus官方，中位數2.38%)，本次搜尋未再查得先前掃描出現的「4.1%(中位數1.5%)」替代版本，惟過去多次出現不同計算基礎版本，維持觀察",
+      "Renaissance IPO：本次官方Stats頁面更新為YTD 103件/$1458億，先前多次查證為舊資料或非當期的「Q3 64件/$153億」「約200件/$376億」兩版本本次未再出現，惟官方頁面仍未提供Q3單季拆分數字",
+      "CBOE Equity Put/Call Ratio：官方數字更新至8/17(0.65)，滯後天數縮短為3天；8/4存在1.11與0.55兩個互相矛盾的版本本次仍未解決",
+      "Buffett Indicator：GuruFocus官方頁面本次確認240%讀數已延續至8/18；另查得229.9%(較舊快照)、244.4%(GuruFocus另頁)、243%(buffettindicator.org,8/13)、292%(currentmarketvaluation即時估算,8/12)、250%(官方Q1)、209.2%(另一來源)，共6個版本並存，落差持續存在",
+      "Shiller CAPE：本次查得GuruFocus更新為41.72(較前次41.96下降)、thetrading.tools 41.2×(不變)，兩來源落差由0.76縮小至0.52",
+      "10Y-2Y殖利率曲線：本次查得10年期殖利率8/19已回落至4.637%、2年期約4.175%，隱含利差約46bps，但FRED T10Y2Y官方利差序列本次搜尋仍未查得8/14後的更新，故未自行推算新利差，僅列為觀察重點",
+      "NYSE A/D Line：本次仍未取得精確累計淨家數；S&P已較8/13新高回落約1.17%，非續創新高狀態，「S&P新高但A/D不創新高」的嚴格觸發條件目前不成立，維持warn",
+      "NAAIM Exposure Index：訂閱制生效後本次搜尋仍僅取得7/29免費資料，滯後天數已達約22天",
+      "Insider Buy/Sell Ratio：整體市場數據滯後至2026-07月度，僅科技子項目更新至8月(0.12，未採用)",
+      "Conference Board LEI：官方公告7月數據將於今日(2026-08-20)美東上午10點發布，本次掃描時間點早於發布時刻，仍沿用6月數字",
+      "CNN Fear & Greed Index：官方頁面本次搜尋仍未直接查得帶時間戳的獨立確認頁面，56為第三方財經媒體引述之數字；另查得一則疑似8/18舊文重複索引、被誤標為「轉入中性區」的Benzinga報導，經核實內容與8/18行情相符，未採用；本次讀數方向與VIX同日回落出現背離",
+      "AAII 家庭股票配置比：本次搜尋另出現兩則版本，「67.3%/63個月」與「70.4%/74個月」，經核實研判均為搜尋引擎索引到的往年同名文章模板、非2026年7月當期數據，均未採用，仍以aaii.com官方7月讀數68.3%/62個月為準",
+      "AAII 散戶情緒：本次搜尋出現標註「當週(至8/19)」的摘要文字與8/12當週數字完全相同，研判官方最新一期截至掃描時間可能尚未正式發布或未被索引，暫維持8/12當週數字"
+    ]
+  },
+  {
+    "scan_date": "2026-08-21",
+    "short_term": {
+      "vix": { "label": "VIX", "value": 16.01, "unit": "", "detail": "8/20(週四)收盤16.01(+7.52%，較8/19收盤14.89上升1.12點)，因財政部公債買回操作的降溫效果短暫消退、殖利率反彈，加上川普誓言加大對伊朗經濟施壓推升油價，市場波動度急升", "as_of": "2026-08-20", "signal": "green", "riskDir": "up", "threshold": "<13自滿 / >25恐慌", "note": "VIX單日大漲逾7%，收復8/19的急速回落，惟16.01仍遠低於25的恐慌閾值，也已脫離13的自滿區間，屬正常波動區間內的反彈" },
+      "fear_greed": { "label": "CNN Fear & Greed", "value": 55, "unit": "", "detail": "8/20數字為55.03(貪婪區間)，較8/19的56續降約1點，延續連續下滑趨勢；CNN官方頁面本次搜尋仍未查得帶時間戳的獨立確認頁面，55.03為第三方數據站點引述", "as_of": "2026-08-20", "signal": "yellow", "riskDir": "up", "threshold": ">75極端貪婪 / <25極端恐懼", "note": "指數連續第四個交易日下滑(65→59→56→55)，仍處Greed區間邊緣但持續降溫，與8/20 VIX大漲、S&P下跌的行情方向較為一致，昨日的背離現象本次緩解" },
+      "aaii_sentiment": { "label": "AAII 散戶情緒 (Bull/Bear)", "value": -3.2, "unit": "pp(多空差)", "detail": "Bullish 34.7% / Neutral 27.4% / Bearish 37.9%（當週至8/12）", "as_of": "2026-08-12(當週)", "signal": "green", "riskDir": "up", "threshold": "多空差 >±20 為極端", "note": "本次搜尋再度出現一則聲稱「當週(至8/19)」的替代版本(Bullish 35.5% / Neutral 24.6% / Bearish 39.9%)，惟以更精確關鍵字重新查證後，官方資料仍僅回傳與8/12當週完全相同的34.7%/27.4%/37.9%，研判8/19當週替代版本為誤植或索引錯置，未採用，暫維持8/12當週數字，遠低於±20極端門檻" },
+      "put_call_ratio": { "label": "CBOE Equity Put/Call Ratio", "value": 0.65, "unit": "", "as_of": "2026-08-17", "detail": "本次搜尋thetrading.tools與CBOE官方數字仍維持8/17最後更新：CBOE Total 0.92(9日均值0.84，處近期區間23百分位、偏複製)、Equity 0.65、Index 1.03；8/18-8/20尚未查得更新版本；8/4另有1.11與0.55兩個互相矛盾的版本本次仍未解決", "signal": "yellow", "riskDir": "down", "threshold": "<0.5偏樂觀 / >0.7偏悲觀", "note": "Equity Put/Call 0.65持續處於0.5–0.7中性區間，尚未觸及任一端極值，數字與前次掃描相同" },
+      "naaim": { "label": "NAAIM Exposure Index", "value": 79.70, "unit": "", "detail": "前值84.02", "as_of": "2026-07-29", "signal": "yellow", "riskDir": "up", "threshold": ">80過度樂觀", "note": "2026-08起轉訂閱制後，本次搜尋仍僅取得7/29免費資料，滯後天數已達約23天，數據新鮮度持續惡化，與前次掃描相同" }
+    },
+    "mid_term": {
+      "margin_debt": { "label": "FINRA Margin Debt", "value": 1.42, "unit": "兆美元", "detail": "GuruFocus官方頁面本次搜尋確認7月數值維持$1,417,225百萬美元(約$1.417兆)，年增38.6%，較6月$1.502兆月減約5.7%，數字與前次掃描相同；8月數據尚未公布", "as_of": "2026-07", "signal": "red", "riskDir": "up", "threshold": "連3月減少為警訊", "note": "僅1個月降幅尚未達「連續3個月月減」門檻，須待8月數據公布後確認方向是否延續" },
+      "margin_debt_gdp": { "label": "Margin Debt / GDP", "value": 4.36, "unit": "%", "detail": "本次搜尋GuruFocus官方頁面更新為7月4.36%(年增30.15%)，較前次掃描沿用的6月歷史新高4.63%明顯回落；歷史中位數2.38%、歷史最高紀錄仍為4.63%(6月)", "as_of": "2026-07", "signal": "red", "riskDir": "up", "threshold": "顯著高於中位數2.38%", "note": "本次為近期掃描首次觀察到該比率月減，由6月歷史新高4.63%降至7月4.36%，惟仍較歷史中位數2.38%高出逾8成，未脫離結構性偏高區間，與FINRA Margin Debt絕對值同步降溫的方向一致" },
+      "ipo_issuance": { "label": "Renaissance IPO 發行量", "value": 103, "unit": "件(2026年迄今YTD，至8月中)", "detail": "本次搜尋未查得較前次掃描(YTD 103件/募資$1458億)更新的官方數字，沿用前值；另查得月度拆分資料顯示6月IPO件數最多(19件)、3月最少(8件)", "as_of": "2026(YTD至8月中)", "signal": "red", "riskDir": "up", "threshold": "IPO潮通常伴隨頭部", "note": "數字與前次掃描相同，Renaissance Capital官方頁面本次未查得Q3單季拆分或更新後的YTD總額" },
+      "insider_buy_sell": { "label": "Insider Buy/Sell Ratio", "value": 0.23, "unit": "", "detail": "均值0.34(另有均值0.39版本)，區間0.17–0.61，年增4.55%", "as_of": "2026-07", "signal": "yellow", "riskDir": "down", "threshold": "<0.17極端賣壓", "note": "整體市場8月數據本次搜尋仍未公布；僅科技類股子項目8月讀數0.12（非整體市場，未採用），與先前掃描情況相同" },
+      "bofa_bull_bear": { "label": "BofA Bull & Bear Indicator", "value": 9.7, "unit": "", "detail": "8/5攀升至9.7（前值9.4），為2021年以來最極端水位；基金經理人現金水位約3.6%，續處於4%警戒線下方", "as_of": "2026-08(最新一期，8/5)", "signal": "red", "riskDir": "up", "threshold": ">8.0觸發賣出訊號", "note": "本次搜尋仍未發現本週有新一期更新，正式賣出訊號持續有效，數字與前次掃描相同" },
+      "hy_oas_spread": { "label": "ICE BofA US HY OAS Spread", "value": 270, "unit": "bps", "detail": "govspending.org鏡像來源顯示8/17最新讀數2.70%(270bps)；Convex另一版本顯示8/12為271bps，兩者接近", "as_of": "2026-08-17", "signal": "green", "riskDir": "up", "threshold": ">450bps示警", "note": "遠低於450bps警戒線，信用市場尚未定價系統性風險，判斷不變，數字較前次掃描(271bps,8/13)略降且資料新鮮度改善" },
+      "ad_line": { "label": "NYSE Advance/Decline Line", "value": null, "unit": "淨家數", "as_of": "2026-08-19", "signal": "green", "riskDir": "down", "threshold": "S&P新高但A/D不創新高", "note": "本次搜尋查得8/19分析指出NYSE A/D Line已接近創新高區域，顯示市場廣度轉佳、不再僅由大型權值股撐盤；同時S&P 500於8/20收7,641.16，較8/13歷史新高7,798.99回落約2.0%，非續創新高狀態，「S&P新高但A/D不創新高」的嚴格觸發條件不成立；本次仍未查得精確累計淨家數，維持審慎" }
+    },
+    "long_term": {
+      "buffett_indicator": { "label": "Buffett Indicator", "value": 237.6, "unit": "%", "as_of": "2026-08-20", "detail": "本次搜尋查得GuruFocus帶時間戳版本顯示8/20為237.6%(歷史新高)；另查得同源GuruFocus不同頁面244.4%、229.9%(較舊快照,8/6)、243%(buffettindicator.org,8/13)、292%(currentmarketvaluation即時估算)、250%(官方Q1 2026讀數)、209.2%(另一來源)，共6個其他版本並存", "signal": "red", "riskDir": "up", "threshold": ">150%顯著高估", "note": "帶時間戳的237.6%版本較前次掃描沿用的240%(8/18)略降，惟版本間落差持續存在，反映不同計算基礎（GNP vs GDP、即時估算vs官方季度）與資料時點差異，均列入data_conflicts" },
+      "shiller_cape": { "label": "Shiller CAPE / PE10", "value": 41.76, "unit": "", "as_of": "2026-08-01", "detail": "GuruFocus本次搜尋顯示8/1讀數41.76(較前次掃描沿用的41.72略升)；另查得thetrading.tools 41.2×(不變)、ChartRow帶時間戳版本顯示8/20為40.4，三來源並存", "signal": "red", "riskDir": "up", "threshold": ">30歷史高檔", "note": "GuruFocus 41.76較長期均值32.47高出約28.6%，續處於1881年以來98百分位以上的歷史高檔區間，仍逼近1999–2000年的44.2歷史高點；三個來源版本落差(40.4–41.76)本次未縮小，列入data_conflicts" },
+      "yield_curve_10y2y": { "label": "10Y-2Y Treasury Yield Curve", "value": 0.46, "unit": "%", "as_of": "2026-08-20", "detail": "本次搜尋查得帶時間戳來源顯示FRED T10Y2Y官方利差序列8/20已更新為+0.46%，較前次掃描沿用的8/14官方數字0.51%略微收窄", "signal": "green", "riskDir": "down", "threshold": "轉負為衰退警訊", "note": "曲線持續維持正斜率未倒掛，本次為近期掃描首次查得8/14之後的官方利差更新，數值較前次略降但仍穩定為正，非衰退警訊" },
+      "lei": { "label": "Conference Board US LEI", "value": 99.5, "unit": "", "detail": "月增0.2%（前值6月經上修為月減0.1%，先前初值為月減0.2%）；2026年1-7月六個月累計轉為正成長+0.2%，一舉扭轉先前六個月的-1.3%收縮", "as_of": "2026-07", "signal": "green", "riskDir": "down", "threshold": "連續下滑轉負為警訊", "note": "Conference Board已於8/20正式發布7月數據，LEI月度與六個月變化率同步轉正，為近期掃描首次觀察到本指標翻轉為正向訊號，與前次掃描沿用的6月99.1(月減0.2%)相比明顯改善" },
+      "aaii_allocation": { "label": "AAII 家庭股票配置比", "value": 68.3, "unit": "%", "detail": "連續62個月高於均值61.5%；債券配置15.7%(-0.2pp)、現金配置16.0%(-0.6pp)", "as_of": "2026-07", "signal": "red", "riskDir": "up", "threshold": "顯著高於均值61.5%", "note": "本次搜尋再度確認「70.4%/74個月」版本直接掛於aaii.com主要調查頁面(標註8/4發布)、另有「67.3%/63個月」版本，經核實研判為往年同名文章模板重複索引、非2026年7月當期數據，均未採用，仍以aaii.com官方7月讀數68.3%/62個月為準，與前次掃描相同" }
+    },
+    "triggers": {
+      "vix_above_25": { "label": "VIX 突破並站穩 >25", "status": "16.01(8/20收盤，較8/19上漲7.52%)", "hit": "no", "horizon": "short" },
+      "fear_greed_drop": { "label": "Fear & Greed >75 跌回 <50", "status": "現值55，近期未見>75紀錄", "hit": "no", "horizon": "short" },
+      "margin_debt_3mo_decline": { "label": "Margin Debt 連續3個月月減", "status": "GuruFocus 7月$1.417兆較6月$1.502兆月減，僅1個月，8月數據尚未公布，未達3個月門檻", "hit": "no", "horizon": "mid" },
+      "hy_spread_above_450": { "label": "HY Spread 擴張 >4.5%", "status": "~270bps", "hit": "no", "horizon": "mid" },
+      "ad_line_divergence": { "label": "S&P 新高但 A/D Line 不創新高", "status": "S&P 8/20收7,641.16，較8/13歷史新高7,798.99低約2.0%，非續創新高狀態；市場廣度分析顯示A/D Line接近創新高，未見頂背離", "hit": "no", "horizon": "mid" },
+      "bofa_bull_bear_above_8": { "label": "BofA Bull & Bear >8.0", "status": "9.7", "hit": "yes", "horizon": "mid" },
+      "insider_below_017": { "label": "Insider Buy/Sell <0.17", "status": "0.23", "hit": "no", "horizon": "mid" }
+    },
+    "top_signal": "本次掃描最值得關注的訊號是8/20美股顯著回落且波動度反彈：S&P 500下跌0.87%收7,641.16、道瓊重挫703.84點(-1.32%)收52,759.21、那斯達克跌1%收26,067.17，VIX同步大漲7.52%至16.01，主因財政部先前公債買回操作對殖利率的降溫效果短暫消退、殖利率反彈，加上川普誓言加大對伊朗經濟施壓推升油價。同日長期指標傳來正面訊號：Conference Board正式發布7月LEI數據，月增0.2%且六個月累計變化率一舉由負轉正(+0.2%)，為近期掃描首見的結構性改善訊號；10Y-2Y殖利率曲線利差本次查得官方更新為+0.46%，維持正斜率未倒掛。中期方面，Margin Debt/GDP比率本次首度觀察到月減，由6月歷史新高4.63%降至7月4.36%，與FINRA Margin Debt絕對值同步降溫方向一致；NYSE A/D Line市場廣度分析顯示已接近創新高，加上S&P本身已較8/13高點回落約2%，「新高不創新高」的頂背離條件不成立。長期估值指標(Buffett Indicator、Shiller CAPE)仍維持歷史高檔，BofA Bull & Bear Indicator的9.7正式賣出訊號持續有效，須留意8/20的股市回落是否為短期波動或趨勢轉折的開端。",
+    "data_conflicts": [
+      "FINRA Margin Debt：GuruFocus官方頁面本次確認7月維持$1.417兆(較6月$1.502兆月減5.7%)，8月數據尚未公布，先前媒體「$1.53兆新高」版本本次搜尋未再出現",
+      "Margin Debt/GDP：本次查得GuruFocus更新為7月4.36%，較前次掃描沿用的6月歷史新高4.63%回落，歷史中位數2.38%",
+      "Renaissance IPO：官方Stats頁面本次未查得較前次掃描(YTD 103件/$1458億)更新的數字，沿用前值",
+      "CBOE Equity Put/Call Ratio：官方數字仍維持8/17最後更新(0.65)，本次搜尋未查得8/18-8/20的更新；8/4存在1.11與0.55兩個互相矛盾的版本本次仍未解決",
+      "Buffett Indicator：本次查得帶時間戳版本237.6%(8/20，GuruFocus)，另有244.4%(GuruFocus另頁)、229.9%(較舊快照,8/6)、243%(buffettindicator.org,8/13)、292%(currentmarketvaluation即時估算)、250%(官方Q1)、209.2%(另一來源)，共6個其他版本並存，落差持續存在",
+      "Shiller CAPE：本次查得GuruFocus 41.76(8/1)、thetrading.tools 41.2×(不變)、ChartRow帶時間戳版本40.4(8/20)，三來源版本並存，落差未縮小",
+      "10Y-2Y殖利率曲線：本次查得帶時間戳來源顯示FRED官方利差序列已更新至8/20(+0.46%)，較前次沿用的8/14數字(0.51%)略降，惟未直接造訪FRED官方頁面逐一核實，列為觀察",
+      "NYSE A/D Line：本次仍未取得精確累計淨家數，僅有定性分析指出A/D Line接近創新高；S&P已較8/13新高回落約2.0%，「S&P新高但A/D不創新高」的嚴格觸發條件目前不成立",
+      "NAAIM Exposure Index：訂閱制生效後本次搜尋仍僅取得7/29免費資料，滯後天數已達約23天",
+      "Insider Buy/Sell Ratio：整體市場數據滯後至2026-07月度，僅科技子項目更新至8月(0.12，未採用)；均值另有0.34與0.39兩個版本並存",
+      "CNN Fear & Greed Index：官方頁面本次搜尋仍未直接查得帶時間戳的獨立確認頁面，55.03為第三方數據站點引述",
+      "AAII 家庭股票配置比：本次搜尋再度確認「70.4%/74個月」版本直接掛於aaii.com主要調查頁面(標註8/4發布)、另有「67.3%/63個月」版本，經核實研判均為往年同名文章模板重複索引、非2026年7月當期數據，仍以官方7月讀數68.3%/62個月為準",
+      "AAII 散戶情緒：本次搜尋再度出現一則聲稱「當週(至8/19)」的替代版本(Bullish 35.5%/Bearish 39.9%)，惟以更精確關鍵字重新查證後，官方資料仍僅回傳與8/12當週相同的34.7%/37.9%，研判替代版本為誤植或索引錯置，未採用"
+    ]
+  }
+]</script>
+
+<script>
+function fatalError(title, detail){
+  document.querySelector(".wrap").innerHTML =
+    `<div class="fatal-error">⚠️ ${title}\n\n${detail}\n\n請檢查 dashboard.html 裡 id="history-data" 的 JSON 內容是否有語法錯誤（多半是某個文字欄位裡混入了未跳脫的引號或 <\/script> 字樣）。</div>`;
+}
+
+// 任何來自資料檔（等同來自網路搜尋）的文字，插入畫面前都要先跳脫，避免破版或注入
+function esc(s){
+  if (s === null || s === undefined) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+let HISTORY = [];
+try {
+  const raw = document.getElementById("history-data").textContent;
+  const parsed = JSON.parse(raw);
+  // 依 scan_date 去重：同一天若有多筆，只保留陣列中最後出現的那一筆
+  const lastIndexByDate = new Map();
+  parsed.forEach((d, i) => lastIndexByDate.set(d.scan_date, i));
+  const deduped = parsed.filter((d, i) => lastIndexByDate.get(d.scan_date) === i);
+  // 防禦性排序：不管寫入順序有沒有出錯，一律強制依日期由舊到新排列
+  deduped.sort((a, b) => a.scan_date < b.scan_date ? -1 : a.scan_date > b.scan_date ? 1 : 0);
+  HISTORY = deduped;
+} catch (e) {
+  fatalError("HISTORY 資料格式錯誤，無法解析", String(e && e.message ? e.message : e));
+}
+
+const SIGNAL_ICON = { green:"🟢", yellow:"🟡", red:"🔴" };
+
+function fmtVal(ind){
+  if (ind.value === null || ind.value === undefined) return "資料衝突／待核實";
+  const unit = esc(ind.unit || "");
+  return `${ind.value}${unit}${ind.detail ? " · " + esc(ind.detail) : ""}`;
+}
+
+// riskDir="up" 代表數字越大風險越高（例：VIX）；"down" 代表數字越小風險越高（例：殖利率曲線、LEI）。
+// 箭頭符號永遠反映數字本身的漲跌，但顏色永遠反映「對你有利／不利」，兩者分開判斷。
+function arrowFor(curr, prev, riskDir){
+  if (prev === undefined || prev === null || curr === null || curr === undefined) return `<span class="arrow flat">－</span>`;
+  if (curr === prev) return `<span class="arrow flat">→</span>`;
+  const rising = curr > prev;
+  const symbol = rising ? "↑" : "↓";
+  const worsening = (riskDir === "down") ? !rising : rising;
+  const cls = worsening ? "bad" : "good";
+  return `<span class="arrow ${cls}">${symbol}</span>`;
+}
+
+// 往回數：同一個指標的 value 連續幾天都是 null（含今天），用來標示「已經幾天沒有可靠資料」
+function nullStreak(dayIndex, groupName, key){
+  let n = 0;
+  for (let i = dayIndex; i >= 0; i--){
+    const g = HISTORY[i] && HISTORY[i][groupName];
+    const ind = g && g[key];
+    if (!ind || ind.value !== null) break;
+    n++;
+  }
+  return n;
+}
+
+function renderTable(tblId, groupName, dayIndex, prevGroup){
+  const group = HISTORY[dayIndex][groupName];
+  const tbl = document.getElementById(tblId);
+  let rows = `<tr><th>指標</th><th>當前值</th><th>變化</th><th>資料日期</th><th>警戒閾值</th><th>信號</th></tr>`;
+  for (const key in group){
+    const ind = group[key];
+    const prevInd = prevGroup ? prevGroup[key] : undefined;
+    const arrow = arrowFor(ind.value, prevInd ? prevInd.value : undefined, ind.riskDir);
+    let note = ind.note || "";
+    if (ind.value === null){
+      const streak = nullStreak(dayIndex, groupName, key);
+      if (streak > 1) note += `${note ? "　" : ""}⚠️ 已連續${streak}天無法取得可靠數字`;
+    }
+    rows += `<tr>
+      <td><strong>${esc(ind.label)}</strong>${note ? `<div class="note">${esc(note)}</div>` : ""}</td>
+      <td>${fmtVal(ind)}</td>
+      <td>${arrow}</td>
+      <td>${esc(ind.as_of)}</td>
+      <td class="note">${esc(ind.threshold)}</td>
+      <td><span class="badge ${ind.signal}"><span class="dot ${ind.signal}"></span>${SIGNAL_ICON[ind.signal]}</span></td>
+    </tr>`;
+  }
+  tbl.innerHTML = rows;
+}
+
+function renderTriggers(day){
+  const tbl = document.getElementById("tblTrig");
+  let rows = `<tr><th>觸發條件</th><th>今日狀態</th><th>達成</th></tr>`;
+  let hitCount = 0, warnCount = 0, shortHit = 0, shortWarn = 0, midHit = 0, midWarn = 0;
+  for (const key in day.triggers){
+    const t = day.triggers[key];
+    let cls = "trig-no", icon = "❌";
+    if (t.hit === "yes"){
+      cls="trig-hit"; icon="✅"; hitCount++;
+      if (t.horizon === "short") shortHit++; else midHit++;
+    } else if (t.hit === "warn"){
+      cls="trig-warn"; icon="⚠️"; warnCount++;
+      if (t.horizon === "short") shortWarn++; else midWarn++;
+    }
+    rows += `<tr><td>${esc(t.label)}</td><td class="note">${esc(t.status)}</td><td class="${cls}">${icon}</td></tr>`;
+  }
+  tbl.innerHTML = rows;
+  document.getElementById("trigSummary").textContent =
+    `今日共有 ${hitCount} / 7 項確定觸發，${warnCount} 項處於警戒邊緣。${hitCount >= 3 ? "已達到分批賣出閾值（≥3項）！" : "尚未達到「同時觸發3項以上」的分批賣出閾值。"}`;
+  return { hitCount, warnCount, shortHit, shortWarn, midHit, midWarn };
+}
+
+function countSignals(day){
+  const all = {...day.short_term, ...day.mid_term, ...day.long_term};
+  let counts = { green:0, yellow:0, red:0 };
+  for (const k in all) counts[all[k].signal]++;
+  return counts;
+}
+
+function renderCards(day, counts){
+  const zone = document.getElementById("cardZone");
+  zone.innerHTML = `
+    <div class="card"><div class="lbl">短期未警報</div><div class="num">${Object.values(day.short_term).filter(i=>i.signal==="green").length} / 5</div></div>
+    <div class="card"><div class="lbl">中期未警報</div><div class="num">${Object.values(day.mid_term).filter(i=>i.signal==="green").length} / 7</div></div>
+    <div class="card"><div class="lbl">長期未警報</div><div class="num">${Object.values(day.long_term).filter(i=>i.signal==="green").length} / 5</div></div>
+    <div class="card"><div class="lbl">全指標紅燈數</div><div class="num" style="color:var(--red)">${counts.red} 🔴</div></div>
+  `;
+}
+
+function renderBanner(day, trigStats){
+  const zone = document.getElementById("bannerZone");
+  let cls = "", text = "";
+  if (trigStats.hitCount >= 3){
+    cls = "alert"; text = `🚨 警戒升級：硬閾值同時觸發 ${trigStats.hitCount} 項，已達分批賣出建議標準。`;
+  } else if (trigStats.hitCount >= 1 || trigStats.warnCount >= 1){
+    cls = ""; text = `⚠️ 今日焦點：${esc(day.top_signal)}`;
+  } else {
+    cls = "ok"; text = `✅ 今日無硬閾值觸發，維持觀察。`;
+  }
+  zone.innerHTML = `<div class="summary-banner ${cls}">${text}</div>`;
+}
+
+// 白話解讀：純粹根據當天已經算出來的紅燈數／觸發數做規則判斷，不臆測、不編數字。
+// 短期卡片只看「短期相關」的觸發（VIX、Fear&Greed），不會被中期指標（例如BofA B&B）誤觸發。
+function computeOutlook(day, trigStats){
+  const shortRed = Object.values(day.short_term).filter(i => i.signal === "red").length;
+  const midRed = Object.values(day.mid_term).filter(i => i.signal === "red").length;
+  const longRed = Object.values(day.long_term).filter(i => i.signal === "red").length;
+
+  let short;
+  if (trigStats.hitCount >= 3) short = { level:"red", text:"現在就要開始分批減倉，短期風險已經到達歷史等級的警戒線。" };
+  else if (trigStats.shortHit >= 1 || shortRed >= 1) short = { level:"yellow", text:"先不用賣，但可以考慮買一點保險（例如VIX相關的避險部位），把停利/停損點想清楚。" };
+  else short = { level:"green", text:"短期沒有需要緊急處理的訊號，正常操作即可。" };
+
+  let mid;
+  if (trigStats.hitCount >= 3) mid = { level:"red", text:"考慮把高風險、高槓桿的部位（例如熱門題材股、近期上市新股）減少10-15%，轉去比較穩的板塊或現金。" };
+  else if (midRed >= 3 || trigStats.midHit >= 2) mid = { level:"red", text:"考慮把高風險、高槓桿的部位（例如熱門題材股、近期上市新股）減少10-15%，轉去比較穩的板塊或現金。" };
+  else if (midRed >= 1 || trigStats.midHit >= 1) mid = { level:"yellow", text:"先觀察就好，不用急著大動作，但要留意這些訊號會不會繼續惡化。" };
+  else mid = { level:"green", text:"中期沒有明顯過熱訊號，維持現有配置即可。" };
+
+  let long;
+  if (longRed >= 2) long = { level:"red", text:"美股長期估值偏貴，可以考慮把美股佔投資組合的比重，分批慢慢調降5-10%，分散到其他市場。" };
+  else if (longRed >= 1) long = { level:"yellow", text:"留意估值持續偏高，暫時不用大幅調整，但新錢投入時可以適度分散。" };
+  else long = { level:"green", text:"長期結構沒有明顯風險，維持原計畫即可。" };
+
+  return { short, mid, long };
+}
+
+function renderOutlook(day, trigStats){
+  const o = computeOutlook(day, trigStats);
+  const zone = document.getElementById("outlookZone");
+  const row = (title, range, o1) => `
+    <div class="outlook-card ${o1.level}">
+      <h4>${SIGNAL_ICON[o1.level]} ${title}<span class="note">（${range}）</span></h4>
+      <p>${o1.text}</p>
+    </div>`;
+  zone.innerHTML = `
+    <div class="outlook">
+      ${row("短期怎麼辦", "1-3個月", o.short)}
+      ${row("中期怎麼辦", "3-12個月", o.mid)}
+      ${row("長期怎麼辦", "1-3年以上", o.long)}
+    </div>`;
+}
+
+function renderConflicts(day){
+  const zone = document.getElementById("conflictZone");
+  zone.innerHTML = day.data_conflicts.map(c => `<li>${esc(c)}</li>`).join("");
+}
+
+// 檢查「目前顯示的這一筆」是否為最新一筆、且距離今天的實際日期已經多久，
+// 用來在畫面上直接提醒你排程可能已經好幾天沒有成功執行（不需要另外去翻 log）。
+function renderStaleness(dayIndex){
+  const note = document.getElementById("staleNote");
+  if (dayIndex !== HISTORY.length - 1){ note.textContent = ""; return; }
+  const latest = new Date(HISTORY[dayIndex].scan_date + "T00:00:00");
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diffDays = Math.round((today - latest) / 86400000);
+  if (diffDays <= 0){
+    note.innerHTML = `<span class="stale-ok">● 資料為最新（今天）</span>`;
+  } else if (diffDays <= 3){
+    note.innerHTML = `<span class="stale-warn">● 最新資料為 ${diffDays} 天前（如遇連假屬正常）</span>`;
+  } else {
+    note.innerHTML = `<span class="stale-bad">● 最新資料為 ${diffDays} 天前（可能遇到假日或更新中斷）</span>`;
+  }
+}
+
+function renderDay(index){
+  const day = HISTORY[index];
+  const prev = HISTORY[index - 1]; // 若無前一筆，變化欄顯示 －
+  renderTable("tblShort", "short_term", index, prev ? prev.short_term : null);
+  renderTable("tblMid", "mid_term", index, prev ? prev.mid_term : null);
+  renderTable("tblLong", "long_term", index, prev ? prev.long_term : null);
+  const trigStats = renderTriggers(day);
+  const counts = countSignals(day);
+  renderCards(day, counts);
+  renderBanner(day, trigStats);
+  renderOutlook(day, trigStats);
+  renderConflicts(day);
+  renderStaleness(index);
+}
+
+function init(){
+  if (HISTORY.length === 0) return; // fatalError() 已經接管畫面，這裡不用再往下跑
+
+  // 記住使用者手動收合/展開新手指南的偏好；file:// 環境下 localStorage 可能不可用，失敗就忽略
+  const guideBox = document.getElementById("guideBox");
+  try {
+    const saved = localStorage.getItem("macroRiskGuideOpen");
+    guideBox.open = saved === null ? true : saved === "true";
+    guideBox.addEventListener("toggle", () => {
+      try { localStorage.setItem("macroRiskGuideOpen", guideBox.open); } catch (e) {}
+    });
+  } catch (e) {
+    guideBox.open = true;
+  }
+
+  const sel = document.getElementById("dateSelect");
+  HISTORY.forEach((d, i) => {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = d.scan_date;
+    sel.appendChild(opt);
+  });
+  sel.selectedIndex = HISTORY.length - 1;
+  sel.addEventListener("change", () => renderDay(parseInt(sel.value)));
+  renderDay(HISTORY.length - 1);
+}
+
+try {
+  init();
+} catch (e) {
+  fatalError("儀表板渲染過程發生錯誤", String(e && e.stack ? e.stack : e));
+}
+</script>
+
+
+<script>
+(function(){
+  var root = document.documentElement;
+  var btn = document.getElementById("themeToggle");
+  function current(){
+    return root.getAttribute("data-theme") ||
+      (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  }
+  function apply(mode){
+    root.setAttribute("data-theme", mode);
+    btn.textContent = mode === "dark" ? "☀️" : "🌙";
+    try { localStorage.setItem("macroRiskTheme", mode); } catch (e) {}
+  }
+  try {
+    var saved = localStorage.getItem("macroRiskTheme");
+    if (saved) { apply(saved); } else { btn.textContent = current() === "dark" ? "☀️" : "🌙"; }
+  } catch (e) { btn.textContent = "🌙"; }
+  btn.addEventListener("click", function(){
+    apply(current() === "dark" ? "light" : "dark");
+  });
+})();
+</script>
+
+</body>
+</html>
