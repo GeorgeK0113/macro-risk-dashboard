@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<title>宏觀風險掃描儀表板</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root{
+    --bg:#eef1f0; --card:#fffdf8; --text:#1a1d23; --sub:#5b6270; --border:#e3e1d8;
+    --green:#1e8e3e; --green-bg:#e6f4ea;
+    --yellow:#a5690a; --yellow-bg:#fff3d6;
+    --red:#c62828; --red-bg:#fdecea;
+    --accent:#c25a1e;
+    --grid-line: rgba(60,55,45,0.06);
+    --blob-green: rgba(30,142,62,0.16);
+    --blob-yellow: rgba(214,150,20,0.18);
+    --blob-red: rgba(198,40,40,0.14);
+    --grain-opacity: 0.05;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#111417; --card:#1b1f24; --text:#e8e9ec; --sub:#9aa1ad; --border:#2b2f37;
+      --green:#4caf6a; --green-bg:#123420;
+      --yellow:#e0b33d; --yellow-bg:#3a2f10;
+      --red:#e0605d; --red-bg:#3a1616;
+      --accent:#e8873f;
+      --grid-line: rgba(255,255,255,0.045);
+      --blob-green: rgba(76,175,106,0.14);
+      --blob-yellow: rgba(224,179,61,0.13);
+      --blob-red: rgba(224,96,93,0.13);
+      --grain-opacity: 0.08;
+    }
+  }
+  *{box-sizing:border-box;}
+  html{background:var(--bg);}
+  body{
+    margin:0; color:var(--text); position:relative; isolation:isolate;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans TC","PingFang TC",Roboto,sans-serif;
+    line-height:1.55; padding:24px 16px 60px; overflow-x:hidden;
+    background:
+      repeating-linear-gradient(0deg, var(--grid-line) 0px, transparent 1px, transparent 28px),
+      repeating-linear-gradient(90deg, var(--grid-line) 0px, transparent 1px, transparent 28px),
+      var(--bg);
+  }
+  body::before{
+    content:""; position:fixed; inset:-10%; z-index:-2; pointer-events:none;
+    background-image:
+      radial-gradient(38vw 38vw at 8% 12%, var(--blob-yellow), transparent 60%),
+      radial-gradient(42vw 42vw at 92% 8%, var(--blob-red), transparent 62%),
+      radial-gradient(46vw 46vw at 50% 105%, var(--blob-green), transparent 65%);
+    filter:blur(60px);
+    animation: driftBlobs 36s ease-in-out infinite alternate;
+  }
+  body::after{
+    content:""; position:fixed; inset:0; z-index:-1; pointer-events:none;
+    opacity:var(--grain-opacity); mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+  }
+  @keyframes driftBlobs{
+    0%{ transform:translate(0,0) scale(1); }
+    50%{ transform:translate(1.5%,-2%) scale(1.04); }
+    100%{ transform:translate(-1.5%,1.5%) scale(0.98); }
+  }
+  .wrap{max-width:1080px; margin:0 auto;}
+  header{margin-bottom:24px;}
+  h1{
+    font-size:1.55rem; margin:0 0 4px; letter-spacing:-.01em;
+    font-family:ui-monospace,"Cascadia Code","SF Mono",Consolas,"Noto Sans TC",monospace;
+  }
+  .datepick{display:flex; align-items:center; gap:10px; margin-top:10px; flex-wrap:wrap;}
+  select{
+    background:var(--card); color:var(--text); border:1px solid var(--border);
+    border-radius:8px; padding:6px 10px; font-size:0.9rem; cursor:pointer;
+    transition:border-color .15s ease;
+  }
+  select:hover{border-color:var(--accent);}
+  .meta{color:var(--sub); font-size:0.85rem;}
+  .stale-ok{color:var(--green);}
+  .stale-warn{color:var(--yellow); font-weight:600;}
+  .stale-bad{color:var(--red); font-weight:700;}
+  .cards{display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:12px; margin:20px 0;}
+  .card{
+    background:var(--card); border:1px solid var(--border); border-radius:12px; padding:16px;
+    box-shadow:0 1px 2px rgba(20,15,5,0.04);
+    transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+  }
+  .card:hover{
+    transform:translateY(-3px);
+    box-shadow:0 10px 24px rgba(20,15,5,0.10);
+    border-color:var(--accent);
+  }
+  .card .num{
+    font-size:1.6rem; font-weight:700;
+    font-family:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace;
+  }
+  .card .lbl{color:var(--sub); font-size:0.8rem; margin-bottom:4px;}
+  section{margin:32px 0;}
+  h2{
+    font-size:1.1rem; border-left:4px solid var(--accent); padding-left:10px; margin-bottom:12px;
+    font-family:ui-monospace,"Cascadia Code","SF Mono",Consolas,"Noto Sans TC",monospace;
+  }
+  h3{font-size:0.95rem; color:var(--sub); margin:18px 0 8px;}
+  table{
+    width:100%; border-collapse:collapse; background:var(--card); border-radius:10px;
+    overflow:hidden; border:1px solid var(--border); box-shadow:0 1px 2px rgba(20,15,5,0.04);
+  }
+  th,td{padding:9px 12px; text-align:left; font-size:0.87rem; border-bottom:1px solid var(--border);}
+  th{background:rgba(128,128,128,0.08); color:var(--sub); font-weight:600; font-size:0.78rem; text-transform:uppercase; letter-spacing:.03em;}
+  tr:last-child td{border-bottom:none;}
+  .tablewrap{overflow-x:auto;}
+  .badge{display:inline-flex; align-items:center; gap:5px; padding:3px 9px; border-radius:999px; font-size:0.78rem; font-weight:600;}
+  .badge.green{background:var(--green-bg); color:var(--green);}
+  .badge.yellow{background:var(--yellow-bg); color:var(--yellow);}
+  .badge.red{background:var(--red-bg); color:var(--red);}
+  .dot{width:8px; height:8px; border-radius:50%; display:inline-block;}
+  .dot.green{background:var(--green);} .dot.yellow{background:var(--yellow);} .dot.red{background:var(--red);}
+  .arrow{font-weight:700;}
+  .arrow.bad{color:var(--red);}
+  .arrow.good{color:var(--green);}
+  .arrow.flat{color:var(--sub);}
+  .note{font-size:0.78rem; color:var(--sub);}
+  .trig-hit{color:var(--red); font-weight:700;}
+  .trig-warn{color:var(--yellow); font-weight:700;}
+  .trig-no{color:var(--sub);}
+  .summary-banner{
+    padding:14px 18px; border-radius:10px; margin-bottom:16px; font-size:0.95rem; font-weight:600;
+    background:var(--yellow-bg); color:var(--yellow); border:1px solid var(--yellow);
+  }
+  .summary-banner.ok{background:var(--green-bg); color:var(--green); border-color:var(--green);}
+  .summary-banner.alert{background:var(--red-bg); color:var(--red); border-color:var(--red);}
+  footer{color:var(--sub); font-size:0.78rem; margin-top:40px; text-align:center;}
+  .conflict-list{font-size:0.85rem; color:var(--sub);}
+  .conflict-list li{margin-bottom:4px;}
+  .fatal-error{
+    max-width:720px; margin:60px auto; padding:24px; border-radius:12px;
+    background:var(--red-bg); color:var(--red); border:1px solid var(--red);
+    font-family:ui-monospace,"Cascadia Code","SF Mono",Consolas,monospace; white-space:pre-wrap; font-size:0.85rem;
+  }
+  details.guide{
+    background:var(--card); border:1px solid var(--border); border-radius:12px;
+    padding:4px 18px 16px; margin:18px 0;
+  }
+  details.guide summary{
+    cursor:pointer; font-weight:700; padding:14px 0; list-style:none; font-size:0.95rem;
+  }
+  details.guide summary::marker{ display:none; content:""; }
+  details.guide summary::-webkit-details-marker{display:none;}
+  details.guide summary::before{content:"▸ "; color:var(--accent);}
+  details.guide[open] summary::before{content:"▾ "; color:var(--accent);}
+  .guide-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(240px,1fr)); gap:14px; margin-top:6px;}
+  .guide-item{font-size:0.85rem; line-height:1.6;}
+  .guide-item b{display:block; margin-bottom:2px;}
+  .guide-legend{display:flex; gap:16px; flex-wrap:wrap; margin:10px 0; font-size:0.85rem;}
+  .guide-legend span{display:inline-flex; align-items:center; gap:5px;}
+  .outlook{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:12px; margin:18px 0;
+  }
+  .outlook-card{
+    border-radius:12px; padding:16px; border:1px solid; font-size:0.88rem; line-height:1.6;
+  }
+  .outlook-card h4{margin:0 0 8px; font-size:0.95rem;}
+  .outlook-card.green{background:var(--green-bg); color:var(--green); border-color:var(--green);}
+  .outlook-card.yellow{background:var(--yellow-bg); color:var(--yellow); border-color:var(--yellow);}
+  .outlook-card.red{background:var(--red-bg); color:var(--red); border-color:var(--red);}
+  .outlook-card p{margin:0; color:var(--text);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1>📊 宏觀風險每日掃描儀表板</h1>
+    <div class="meta">17項指標追蹤 · 資料來源：CBOE / FRED / AAII / NAAIM / FINRA / GuruFocus / Renaissance Capital / BofA / Conference Board</div>
+    <div class="datepick">
+      <label class="meta">掃描日期：</label>
+      <select id="dateSelect"></select>
+      <span class="meta" id="staleNote"></span>
+    </div>
+  </header>
+
+  <details class="guide" id="guideBox">
+    <summary>📖 新手看這裡：怎麼看這份儀表板</summary>
+    <div class="guide-legend">
+      <span>🟢 綠燈：正常，不用理它</span>
+      <span>🟡 黃燈：稍微偏熱，觀察就好</span>
+      <span>🔴 紅燈：警戒，開始留意</span>
+      <span><span class="arrow bad">■</span> 紅色＝對你不利（風險上升）</span>
+      <span><span class="arrow good">■</span> 綠色＝對你有利（風險下降）</span>
+      <span><span class="arrow flat">－</span> 跟上次差不多／沒有前一筆可比</span>
+    </div>
+    <div class="guide-item" style="margin-bottom:10px;">
+      <b>⚠️ 顏色跟數字漲跌方向沒有直接關係！</b>每個指標「漲=好」還是「跌=好」不一樣（例如VIX漲=不好，但殖利率曲線漲=好），儀表板已經幫你把方向換算成統一的「紅=不利、綠=有利」，你只要看顏色，不用自己判斷這個數字漲跌各自代表什麼意思。
+    </div>
+    <div class="guide-grid">
+      <div class="guide-item"><b>🟢 短期指標（天－週）</b>抓的是「現在市場情緒會不會太興奮／太恐慌」，管的是未來1-3個月要不要先減碼或買保險，不代表長期一定會跌。</div>
+      <div class="guide-item"><b>🟡 中期指標（週－月）</b>抓的是「錢有沒有借太多、大家有沒有太瘋狂追股票」，管的是未來3-12個月的趨勢會不會轉彎。</div>
+      <div class="guide-item"><b>🔴 長期指標（月－年）</b>抓的是「股市現在的價格算不算貴」，管的是未來1-3年以上，跟長期該不該調整持股比例有關，不是用來預測明天漲跌。</div>
+      <div class="guide-item"><b>警戒閾值</b>是這個指標歷史上被驗證過的「危險線」，超過這條線不代表一定會跌，但代表過去類似情況出現後，下跌的機率通常比較高。</div>
+      <div class="guide-item"><b>賣出觸發表</b>是7條比較硬的規則，同時觸發到3條以上，才是真的建議開始分批賣出；只觸發1-2條，代表要提高警覺，但還不用真的動手。</div>
+      <div class="guide-item"><b>資料衝突／待核實</b>代表我找到的資料互相矛盾或抓不到，不是股市本身有問題，這種指標先不要拿來做決定。</div>
+    </div>
+  </details>
+
+  <div id="bannerZone"></div>
+
+  <div id="outlookZone"></div>
+
+  <div class="cards" id="cardZone"></div>
+
+  <section>
+    <h2>🟢 短期指標（天－週級別）</h2>
+    <div class="tablewrap"><table id="tblShort"></table></div>
+  </section>
+
+  <section>
+    <h2>🟡 中期指標（週－月級別）</h2>
+    <div class="tablewrap"><table id="tblMid"></table></div>
+  </section>
+
+  <section>
+    <h2>🔴 長期指標（月－年級別）</h2>
+    <div class="tablewrap"><table id="tblLong"></table></div>
+  </section>
+
+  <section>
+    <h2>🚨 賣出觸發狀態追蹤</h2>
+    <div class="tablewrap"><table id="tblTrig"></table></div>
+    <p id="trigSummary" class="meta"></p>
+  </section>
+
+  <section>
+    <h2>⚠️ 資料滯後 / 來源衝突</h2>
+    <ul class="conflict-list" id="conflictZone"></ul>
+  </section>
+
+  <footer>本頁為本機審查用儀表板，資料不會上傳。每日排程掃描完成後將新增一筆記錄至下拉選單以便比對。</footer>
+</div>
+
+<!--
+  歷史資料庫：純 JSON（非可執行程式碼）。
+  每完成一次掃描，於下方陣列「尾端」新增一筆物件；若當天已有一筆（scan_date 相同），改為覆蓋該筆，不要重複新增。
+  寫入前務必確認：所有字串都必須是合法 JSON 雙引號字串，且任何欄位文字中若出現「</」這個字元序列
+  （常見於複製貼上的網頁標題或程式碼片段），一律要改成「<\/」，否則會提前結束下面的 <\/script> 標籤。
+  每個指標物件必須包含 riskDir："up"（數字越大風險越高）或"down"（數字越小風險越高），
+  每個 trigger 物件必須包含 horizon："short" 或 "mid"，用來讓前端正確計算方向與白話建議。
+-->
+<script type="application/json" id="history-data">[
+  {
+    "scan_date": "2026-08-07",
+    "short_term": {
+      "vix": {
+        "label": "VIX",
+        "value": 16.15,
+        "unit": "",
+        "detail": "8/7開盤16.15 · 前日區間15.3–16.0",
+        "as_of": "2026-08-07(開盤)",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": "<13自滿 / >25恐慌",
+        "note": "各來源日期標示不一致，時效性仍存疑"
+      },
+      "fear_greed": {
+        "label": "CNN Fear & Greed",
+        "value": 60,
+        "unit": "",
+        "as_of": "2026-08-05~06",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">75極端貪婪 / <25極端恐懼",
+        "note": "8/6報導稱情緒持續改善但未附具體數值，暫沿用8/5讀數60"
+      },
+      "aaii_sentiment": {
+        "label": "AAII 散戶情緒 (Bull/Bear)",
+        "value": null,
+        "as_of": "2026-08-04~06",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": "多空差 >±20 為極端",
+        "note": "來源衝突持續：一組Bullish 37.0%(8/6)，另一組Bullish 31.0%/Bearish 42.1%(8/4)，需人工核實 aaii.com"
+      },
+      "put_call_ratio": {
+        "label": "CBOE Equity Put/Call Ratio",
+        "value": null,
+        "unit": "",
+        "as_of": "2026-08-03~04",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.5偏樂觀 / >0.7偏悲觀",
+        "note": "來源劇烈衝突：0.55(8/3) vs 1.11(8/4，Convex)，差距過大疑似定義不同(equity-only vs total)，未採用單一數字"
+      },
+      "naaim": {
+        "label": "NAAIM Exposure Index",
+        "value": 79.7,
+        "unit": "",
+        "detail": "前值84.02",
+        "as_of": "2026-07-29",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": ">80過度樂觀",
+        "note": "2026-08-01起轉訂閱制，本次仍僅取得7/29免費資料，尚無8月更新"
+      }
+    },
+    "mid_term": {
+      "margin_debt": {
+        "label": "FINRA Margin Debt",
+        "value": 1.5,
+        "unit": "兆美元",
+        "detail": "月增7.9%(6月) · 年增49.02%",
+        "as_of": "2026-06",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "連3月減少為警訊",
+        "note": "連3月創新高（方向相反）；今日讀數(1.50兆/49.02%)與稍早報告(1.53兆/51.5%)略有出入，見data_conflicts"
+      },
+      "margin_debt_gdp": {
+        "label": "Margin Debt / GDP",
+        "value": 4.63,
+        "unit": "%",
+        "detail": "年增39.88%",
+        "as_of": "2026-06",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於中位數2.38%",
+        "note": "歷史紀錄新高"
+      },
+      "ipo_issuance": {
+        "label": "Renaissance IPO 發行量",
+        "value": 64,
+        "unit": "件(Q3)",
+        "detail": "募資US$153億",
+        "as_of": "2026 Q3(截至8月初)",
+        "signal": "yellow",
+        "riskDir": "up",
+        "threshold": "IPO潮通常伴隨頭部",
+        "note": "2021年以來最大單季"
+      },
+      "insider_buy_sell": {
+        "label": "Insider Buy/Sell Ratio",
+        "value": 0.23,
+        "unit": "",
+        "detail": "均值0.39",
+        "as_of": "2026-07",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "<0.17極端賣壓"
+      },
+      "bofa_bull_bear": {
+        "label": "BofA Bull & Bear Indicator",
+        "value": 9.6,
+        "unit": "",
+        "detail": "5年新高",
+        "as_of": "2026年7月最後一週",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">8.0觸發賣出訊號",
+        "note": "本次搜尋未見8月更新讀數，沿用7月數值，已觸發"
+      },
+      "hy_oas_spread": {
+        "label": "ICE BofA US HY OAS Spread",
+        "value": 273,
+        "unit": "bps",
+        "as_of": "2026-08-04",
+        "signal": "green",
+        "riskDir": "up",
+        "threshold": ">450bps示警",
+        "note": "來源間273–287bps不等，另有一則報導稱372bps與其他來源明顯不符，疑為過時引用，未採用"
+      },
+      "ad_line": {
+        "label": "NYSE Advance/Decline Line",
+        "value": -1800,
+        "unit": "淨家數",
+        "as_of": "2026-07-29",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "S&P新高但A/D不創新高",
+        "note": "S&P已於8/4創7,737新高，但本次搜尋未取得8月A/D Line新數據以確認/否認頂背離，為本次最大資料缺口"
+      }
+    },
+    "long_term": {
+      "buffett_indicator": {
+        "label": "Buffett Indicator",
+        "value": 219,
+        "unit": "%",
+        "as_of": "2026-03-31",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">150%顯著高估",
+        "note": "官方頁面仍基於3月GDP數據，已滯後逾4個月；多個即時追蹤網站顯示8月已達220%–241%不等，見data_conflicts"
+      },
+      "shiller_cape": {
+        "label": "Shiller CAPE / PE10",
+        "value": 41.9,
+        "unit": "",
+        "as_of": "2026-08-01",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": ">30歷史高檔",
+        "note": "來源間微幅出入(41.18–42.19)，採用GuruFocus 8/1報價"
+      },
+      "yield_curve_10y2y": {
+        "label": "10Y-2Y Treasury Yield Curve",
+        "value": 0.42,
+        "unit": "%",
+        "as_of": "2026-08-04",
+        "signal": "green",
+        "riskDir": "down",
+        "threshold": "轉負為衰退警訊",
+        "note": "另一來源標示0.45%(8/3)，差異極小"
+      },
+      "lei": {
+        "label": "Conference Board US LEI",
+        "value": 99.1,
+        "unit": "",
+        "detail": "月增-0.2%",
+        "as_of": "2026-06",
+        "signal": "yellow",
+        "riskDir": "down",
+        "threshold": "連續下滑轉負為警訊",
+        "note": "下次公布2026-08-20，本次搜尋確認數據未變"
+      },
+      "aaii_allocation": {
+        "label": "AAII 家庭股票配置比",
+        "value": 68.3,
+        "unit": "%",
+        "detail": "6月71.0%→7月68.3%，連續62個月高於均值61.5%",
+        "as_of": "2026-07",
+        "signal": "red",
+        "riskDir": "up",
+        "threshold": "顯著高於均值61.5%",
+        "note": "本次搜尋確認7月為最新一期，已非衝突而是趨勢：月減2.7個百分點但仍遠高於均值"
+      }
+    },
+    "triggers": {
+      "vix_above_25": {
+        "label": "VIX 突破並站穩 >25",
+        "status": "16.15",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "fear_greed_drop": {
+        "label": "Fear & Greed >75 跌回 <50",
+        "status": "現值60，近期未見>75",
+        "hit": "no",
+        "horizon": "short"
+      },
+      "margin_debt_3mo_decline": {
+        "label": "Margin Debt 連續3個月月減",
+        "status": "連續3個月創新高（相反）",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "hy_spread_above_450": {
+        "label": "HY Spread 擴張 >4.5%",
+        "status": "~2.73%",
+        "hit": "no",
+        "horizon": "mid"
+      },
+      "ad_line_divergence": {
+        "label": "A/D Line 頂背離",
+        "status": "S&P 8/4創新高，A/D Line僅有7/29數據可查、尚未確認",
+        "hit": "warn",
+        "horizon": "mid"
+      },
+      "bofa_bull_bear_above_8": {
+        "label": "BofA Bull & Bear >8.0",
+        "status": "9.6",
+        "hit": "yes",
+        "horizon": "mid"
+      },
+      "insider_below_017": {
+        "label": "Insider Buy/Sell <0.17",
+        "status": "0.23",
+        "hit": "no",
+        "horizon": "mid"
+      }
+    },
+    "top_signal": "BofA Bull & Bear Indicator（9.6）：唯一確定觸發硬閾值的指標，本次重新查證仍維持5年新高讀數，與Margin Debt年增49%、CAPE 41.9、Buffett Indicator同步發出過熱訊號；同時S&P 500於8/4創7,737新高但A/D Line缺乏同期數據確認，為本次掃描最需留意的資料缺口。",
+    "data_conflicts": [
+      "AAII 散戶情緒調查：三組讀數互相矛盾（Bullish 37.0%(8/6) vs 31.0%/Bearish 42.1%(8/4) vs 更早的29.6%/42.3%），請至 aaii.com/sentimentsurvey 核實",
+      "CBOE Equity Put/Call Ratio：0.55(8/3) 與 1.11(8/4，Convex來源) 差距過大，疑似指標定義不同（equity-only vs total put/call），本次未採用單一數字",
+      "FINRA Margin Debt：本次GuruFocus查得$1.50兆／年增49.02%，與稍早流傳的$1.53兆／年增51.5%不同，可能為四捨五入或資料版本差異",
+      "ICE BofA HY OAS利差：來源間273bps(8/4)–287bps(7月)不等，另有一則報導稱「372bps創2023年12月以來新高」與其餘來源明顯不符，判斷為過時或錯誤引用，未採用",
+      "NYSE A/D Line：最新可得數據仍停留在7/29，S&P 500已於8/4創7,737新高，但未查得8月的A/D Line更新數值以確認或排除頂背離",
+      "Buffett Indicator：官方currentmarketvaluation.com頁面仍基於3/31 GDP數據顯示219%，但多個即時追蹤網站顯示8月已達220%–241%不等，官方數據滯後程度可能被低估",
+      "NAAIM Exposure Index：2026-08-01起轉訂閱制，本次搜尋仍僅能取得7/29免費資料",
+      "Insider Buy/Sell Ratio：滯後至2026-07月度數據",
+      "Conference Board LEI：滯後至2026-06月度數據，下次公布2026-08-20",
+      "Shiller CAPE：來源間微幅出入(41.18–42.19)，採用GuruFocus 8/1報價41.9"
+    ]
+  }
+]</script>
+
+<script>
+function fatalError(title, detail){
+  document.querySelector(".wrap").innerHTML =
+    `<div class="fatal-error">⚠️ ${title}\n\n${detail}\n\n請檢查 dashboard.html 裡 id="history-data" 的 JSON 內容是否有語法錯誤（多半是某個文字欄位裡混入了未跳脫的引號或 <\/script> 字樣）。</div>`;
+}
+
+// 任何來自資料檔（等同來自網路搜尋）的文字，插入畫面前都要先跳脫，避免破版或注入
+function esc(s){
+  if (s === null || s === undefined) return "";
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+let HISTORY = [];
+try {
+  const raw = document.getElementById("history-data").textContent;
+  const parsed = JSON.parse(raw);
+  // 依 scan_date 去重：同一天若有多筆，只保留陣列中最後出現的那一筆
+  const lastIndexByDate = new Map();
+  parsed.forEach((d, i) => lastIndexByDate.set(d.scan_date, i));
+  const deduped = parsed.filter((d, i) => lastIndexByDate.get(d.scan_date) === i);
+  // 防禦性排序：不管寫入順序有沒有出錯，一律強制依日期由舊到新排列
+  deduped.sort((a, b) => a.scan_date < b.scan_date ? -1 : a.scan_date > b.scan_date ? 1 : 0);
+  HISTORY = deduped;
+} catch (e) {
+  fatalError("HISTORY 資料格式錯誤，無法解析", String(e && e.message ? e.message : e));
+}
+
+const SIGNAL_ICON = { green:"🟢", yellow:"🟡", red:"🔴" };
+
+function fmtVal(ind){
+  if (ind.value === null || ind.value === undefined) return "資料衝突／待核實";
+  const unit = esc(ind.unit || "");
+  return `${ind.value}${unit}${ind.detail ? " · " + esc(ind.detail) : ""}`;
+}
+
+// riskDir="up" 代表數字越大風險越高（例：VIX）；"down" 代表數字越小風險越高（例：殖利率曲線、LEI）。
+// 箭頭符號永遠反映數字本身的漲跌，但顏色永遠反映「對你有利／不利」，兩者分開判斷。
+function arrowFor(curr, prev, riskDir){
+  if (prev === undefined || prev === null || curr === null || curr === undefined) return `<span class="arrow flat">－</span>`;
+  if (curr === prev) return `<span class="arrow flat">→</span>`;
+  const rising = curr > prev;
+  const symbol = rising ? "↑" : "↓";
+  const worsening = (riskDir === "down") ? !rising : rising;
+  const cls = worsening ? "bad" : "good";
+  return `<span class="arrow ${cls}">${symbol}</span>`;
+}
+
+// 往回數：同一個指標的 value 連續幾天都是 null（含今天），用來標示「已經幾天沒有可靠資料」
+function nullStreak(dayIndex, groupName, key){
+  let n = 0;
+  for (let i = dayIndex; i >= 0; i--){
+    const g = HISTORY[i] && HISTORY[i][groupName];
+    const ind = g && g[key];
+    if (!ind || ind.value !== null) break;
+    n++;
+  }
+  return n;
+}
+
+function renderTable(tblId, groupName, dayIndex, prevGroup){
+  const group = HISTORY[dayIndex][groupName];
+  const tbl = document.getElementById(tblId);
+  let rows = `<tr><th>指標</th><th>當前值</th><th>變化</th><th>資料日期</th><th>警戒閾值</th><th>信號</th></tr>`;
+  for (const key in group){
+    const ind = group[key];
+    const prevInd = prevGroup ? prevGroup[key] : undefined;
+    const arrow = arrowFor(ind.value, prevInd ? prevInd.value : undefined, ind.riskDir);
+    let note = ind.note || "";
+    if (ind.value === null){
+      const streak = nullStreak(dayIndex, groupName, key);
+      if (streak > 1) note += `${note ? "　" : ""}⚠️ 已連續${streak}天無法取得可靠數字`;
+    }
+    rows += `<tr>
+      <td><strong>${esc(ind.label)}</strong>${note ? `<div class="note">${esc(note)}</div>` : ""}</td>
+      <td>${fmtVal(ind)}</td>
+      <td>${arrow}</td>
+      <td>${esc(ind.as_of)}</td>
+      <td class="note">${esc(ind.threshold)}</td>
+      <td><span class="badge ${ind.signal}"><span class="dot ${ind.signal}"></span>${SIGNAL_ICON[ind.signal]}</span></td>
+    </tr>`;
+  }
+  tbl.innerHTML = rows;
+}
+
+function renderTriggers(day){
+  const tbl = document.getElementById("tblTrig");
+  let rows = `<tr><th>觸發條件</th><th>今日狀態</th><th>達成</th></tr>`;
+  let hitCount = 0, warnCount = 0, shortHit = 0, shortWarn = 0, midHit = 0, midWarn = 0;
+  for (const key in day.triggers){
+    const t = day.triggers[key];
+    let cls = "trig-no", icon = "❌";
+    if (t.hit === "yes"){
+      cls="trig-hit"; icon="✅"; hitCount++;
+      if (t.horizon === "short") shortHit++; else midHit++;
+    } else if (t.hit === "warn"){
+      cls="trig-warn"; icon="⚠️"; warnCount++;
+      if (t.horizon === "short") shortWarn++; else midWarn++;
+    }
+    rows += `<tr><td>${esc(t.label)}</td><td class="note">${esc(t.status)}</td><td class="${cls}">${icon}</td></tr>`;
+  }
+  tbl.innerHTML = rows;
+  document.getElementById("trigSummary").textContent =
+    `今日共有 ${hitCount} / 7 項確定觸發，${warnCount} 項處於警戒邊緣。${hitCount >= 3 ? "已達到分批賣出閾值（≥3項）！" : "尚未達到「同時觸發3項以上」的分批賣出閾值。"}`;
+  return { hitCount, warnCount, shortHit, shortWarn, midHit, midWarn };
+}
+
+function countSignals(day){
+  const all = {...day.short_term, ...day.mid_term, ...day.long_term};
+  let counts = { green:0, yellow:0, red:0 };
+  for (const k in all) counts[all[k].signal]++;
+  return counts;
+}
+
+function renderCards(day, counts){
+  const zone = document.getElementById("cardZone");
+  zone.innerHTML = `
+    <div class="card"><div class="lbl">短期未警報</div><div class="num">${Object.values(day.short_term).filter(i=>i.signal==="green").length} / 5</div></div>
+    <div class="card"><div class="lbl">中期未警報</div><div class="num">${Object.values(day.mid_term).filter(i=>i.signal==="green").length} / 7</div></div>
+    <div class="card"><div class="lbl">長期未警報</div><div class="num">${Object.values(day.long_term).filter(i=>i.signal==="green").length} / 5</div></div>
+    <div class="card"><div class="lbl">全指標紅燈數</div><div class="num" style="color:var(--red)">${counts.red} 🔴</div></div>
+  `;
+}
+
+function renderBanner(day, trigStats){
+  const zone = document.getElementById("bannerZone");
+  let cls = "", text = "";
+  if (trigStats.hitCount >= 3){
+    cls = "alert"; text = `🚨 警戒升級：硬閾值同時觸發 ${trigStats.hitCount} 項，已達分批賣出建議標準。`;
+  } else if (trigStats.hitCount >= 1 || trigStats.warnCount >= 1){
+    cls = ""; text = `⚠️ 今日焦點：${esc(day.top_signal)}`;
+  } else {
+    cls = "ok"; text = `✅ 今日無硬閾值觸發，維持觀察。`;
+  }
+  zone.innerHTML = `<div class="summary-banner ${cls}">${text}</div>`;
+}
+
+// 白話解讀：純粹根據當天已經算出來的紅燈數／觸發數做規則判斷，不臆測、不編數字。
+// 短期卡片只看「短期相關」的觸發（VIX、Fear&Greed），不會被中期指標（例如BofA B&B）誤觸發。
+function computeOutlook(day, trigStats){
+  const shortRed = Object.values(day.short_term).filter(i => i.signal === "red").length;
+  const midRed = Object.values(day.mid_term).filter(i => i.signal === "red").length;
+  const longRed = Object.values(day.long_term).filter(i => i.signal === "red").length;
+
+  let short;
+  if (trigStats.hitCount >= 3) short = { level:"red", text:"現在就要開始分批減倉，短期風險已經到達歷史等級的警戒線。" };
+  else if (trigStats.shortHit >= 1 || shortRed >= 1) short = { level:"yellow", text:"先不用賣，但可以考慮買一點保險（例如VIX相關的避險部位），把停利/停損點想清楚。" };
+  else short = { level:"green", text:"短期沒有需要緊急處理的訊號，正常操作即可。" };
+
+  let mid;
+  if (trigStats.hitCount >= 3) mid = { level:"red", text:"考慮把高風險、高槓桿的部位（例如熱門題材股、近期上市新股）減少10-15%，轉去比較穩的板塊或現金。" };
+  else if (midRed >= 3 || trigStats.midHit >= 2) mid = { level:"red", text:"考慮把高風險、高槓桿的部位（例如熱門題材股、近期上市新股）減少10-15%，轉去比較穩的板塊或現金。" };
+  else if (midRed >= 1 || trigStats.midHit >= 1) mid = { level:"yellow", text:"先觀察就好，不用急著大動作，但要留意這些訊號會不會繼續惡化。" };
+  else mid = { level:"green", text:"中期沒有明顯過熱訊號，維持現有配置即可。" };
+
+  let long;
+  if (longRed >= 2) long = { level:"red", text:"美股長期估值偏貴，可以考慮把美股佔投資組合的比重，分批慢慢調降5-10%，分散到其他市場。" };
+  else if (longRed >= 1) long = { level:"yellow", text:"留意估值持續偏高，暫時不用大幅調整，但新錢投入時可以適度分散。" };
+  else long = { level:"green", text:"長期結構沒有明顯風險，維持原計畫即可。" };
+
+  return { short, mid, long };
+}
+
+function renderOutlook(day, trigStats){
+  const o = computeOutlook(day, trigStats);
+  const zone = document.getElementById("outlookZone");
+  const row = (title, range, o1) => `
+    <div class="outlook-card ${o1.level}">
+      <h4>${SIGNAL_ICON[o1.level]} ${title}<span class="note">（${range}）</span></h4>
+      <p>${o1.text}</p>
+    </div>`;
+  zone.innerHTML = `
+    <div class="outlook">
+      ${row("短期怎麼辦", "1-3個月", o.short)}
+      ${row("中期怎麼辦", "3-12個月", o.mid)}
+      ${row("長期怎麼辦", "1-3年以上", o.long)}
+    </div>`;
+}
+
+function renderConflicts(day){
+  const zone = document.getElementById("conflictZone");
+  zone.innerHTML = day.data_conflicts.map(c => `<li>${esc(c)}</li>`).join("");
+}
+
+// 檢查「目前顯示的這一筆」是否為最新一筆、且距離今天的實際日期已經多久，
+// 用來在畫面上直接提醒你排程可能已經好幾天沒有成功執行（不需要另外去翻 log）。
+function renderStaleness(dayIndex){
+  const note = document.getElementById("staleNote");
+  if (dayIndex !== HISTORY.length - 1){ note.textContent = ""; return; }
+  const latest = new Date(HISTORY[dayIndex].scan_date + "T00:00:00");
+  const today = new Date(); today.setHours(0,0,0,0);
+  const diffDays = Math.round((today - latest) / 86400000);
+  if (diffDays <= 0){
+    note.innerHTML = `<span class="stale-ok">● 資料為最新（今天）</span>`;
+  } else if (diffDays <= 3){
+    note.innerHTML = `<span class="stale-warn">● 最新資料為 ${diffDays} 天前（如遇連假屬正常，超過3天請檢查排程）</span>`;
+  } else {
+    note.innerHTML = `<span class="stale-bad">● 最新資料已經 ${diffDays} 天沒更新！排程可能失敗，請檢查 logs/run_history.log 或手動執行 run_daily_scan.ps1</span>`;
+  }
+}
+
+function renderDay(index){
+  const day = HISTORY[index];
+  const prev = HISTORY[index - 1]; // 若無前一筆，變化欄顯示 －
+  renderTable("tblShort", "short_term", index, prev ? prev.short_term : null);
+  renderTable("tblMid", "mid_term", index, prev ? prev.mid_term : null);
+  renderTable("tblLong", "long_term", index, prev ? prev.long_term : null);
+  const trigStats = renderTriggers(day);
+  const counts = countSignals(day);
+  renderCards(day, counts);
+  renderBanner(day, trigStats);
+  renderOutlook(day, trigStats);
+  renderConflicts(day);
+  renderStaleness(index);
+}
+
+function init(){
+  if (HISTORY.length === 0) return; // fatalError() 已經接管畫面，這裡不用再往下跑
+
+  // 記住使用者手動收合/展開新手指南的偏好；file:// 環境下 localStorage 可能不可用，失敗就忽略
+  const guideBox = document.getElementById("guideBox");
+  try {
+    const saved = localStorage.getItem("macroRiskGuideOpen");
+    guideBox.open = saved === null ? true : saved === "true";
+    guideBox.addEventListener("toggle", () => {
+      try { localStorage.setItem("macroRiskGuideOpen", guideBox.open); } catch (e) {}
+    });
+  } catch (e) {
+    guideBox.open = true;
+  }
+
+  const sel = document.getElementById("dateSelect");
+  HISTORY.forEach((d, i) => {
+    const opt = document.createElement("option");
+    opt.value = i;
+    opt.textContent = d.scan_date;
+    sel.appendChild(opt);
+  });
+  sel.selectedIndex = HISTORY.length - 1;
+  sel.addEventListener("change", () => renderDay(parseInt(sel.value)));
+  renderDay(HISTORY.length - 1);
+}
+
+try {
+  init();
+} catch (e) {
+  fatalError("儀表板渲染過程發生錯誤", String(e && e.stack ? e.stack : e));
+}
+</script>
+</body>
+</html>

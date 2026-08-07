@@ -1,0 +1,48 @@
+{
+  "scan_date": "2026-08-07",
+  "short_term": {
+    "vix": { "label": "VIX", "value": 16.15, "unit": "", "detail": "8/7開盤16.15 · 前日區間15.3–16.0", "as_of": "2026-08-07(開盤)", "signal": "green", "riskDir": "up", "threshold": "<13自滿 / >25恐慌", "note": "各來源日期標示不一致，時效性仍存疑" },
+    "fear_greed": { "label": "CNN Fear & Greed", "value": 60, "unit": "", "as_of": "2026-08-05~06", "signal": "yellow", "riskDir": "up", "threshold": ">75極端貪婪 / <25極端恐懼", "note": "8/6報導稱情緒持續改善但未附具體數值，暫沿用8/5讀數60" },
+    "aaii_sentiment": { "label": "AAII 散戶情緒 (Bull/Bear)", "value": null, "as_of": "2026-08-04~06", "signal": "yellow", "riskDir": "up", "threshold": "多空差 >±20 為極端", "note": "來源衝突持續：一組Bullish 37.0%(8/6)，另一組Bullish 31.0%/Bearish 42.1%(8/4)，需人工核實 aaii.com" },
+    "put_call_ratio": { "label": "CBOE Equity Put/Call Ratio", "value": null, "unit": "", "as_of": "2026-08-03~04", "signal": "yellow", "riskDir": "down", "threshold": "<0.5偏樂觀 / >0.7偏悲觀", "note": "來源劇烈衝突：0.55(8/3) vs 1.11(8/4，Convex)，差距過大疑似定義不同(equity-only vs total)，未採用單一數字" },
+    "naaim": { "label": "NAAIM Exposure Index", "value": 79.70, "unit": "", "detail": "前值84.02", "as_of": "2026-07-29", "signal": "yellow", "riskDir": "up", "threshold": ">80過度樂觀", "note": "2026-08-01起轉訂閱制，本次仍僅取得7/29免費資料，尚無8月更新" }
+  },
+  "mid_term": {
+    "margin_debt": { "label": "FINRA Margin Debt", "value": 1.50, "unit": "兆美元", "detail": "月增7.9%(6月) · 年增49.02%", "as_of": "2026-06", "signal": "red", "riskDir": "up", "threshold": "連3月減少為警訊", "note": "連3月創新高（方向相反）；今日讀數(1.50兆/49.02%)與稍早報告(1.53兆/51.5%)略有出入，見data_conflicts" },
+    "margin_debt_gdp": { "label": "Margin Debt / GDP", "value": 4.63, "unit": "%", "detail": "年增39.88%", "as_of": "2026-06", "signal": "red", "riskDir": "up", "threshold": "顯著高於中位數2.38%", "note": "歷史紀錄新高" },
+    "ipo_issuance": { "label": "Renaissance IPO 發行量", "value": 64, "unit": "件(Q3)", "detail": "募資US$153億", "as_of": "2026 Q3(截至8月初)", "signal": "yellow", "riskDir": "up", "threshold": "IPO潮通常伴隨頭部", "note": "2021年以來最大單季" },
+    "insider_buy_sell": { "label": "Insider Buy/Sell Ratio", "value": 0.23, "unit": "", "detail": "均值0.39", "as_of": "2026-07", "signal": "yellow", "riskDir": "down", "threshold": "<0.17極端賣壓" },
+    "bofa_bull_bear": { "label": "BofA Bull & Bear Indicator", "value": 9.6, "unit": "", "detail": "5年新高", "as_of": "2026年7月最後一週", "signal": "red", "riskDir": "up", "threshold": ">8.0觸發賣出訊號", "note": "本次搜尋未見8月更新讀數，沿用7月數值，已觸發" },
+    "hy_oas_spread": { "label": "ICE BofA US HY OAS Spread", "value": 273, "unit": "bps", "as_of": "2026-08-04", "signal": "green", "riskDir": "up", "threshold": ">450bps示警", "note": "來源間273–287bps不等，另有一則報導稱372bps與其他來源明顯不符，疑為過時引用，未採用" },
+    "ad_line": { "label": "NYSE Advance/Decline Line", "value": -1800, "unit": "淨家數", "as_of": "2026-07-29", "signal": "yellow", "riskDir": "down", "threshold": "S&P新高但A/D不創新高", "note": "S&P已於8/4創7,737新高，但本次搜尋未取得8月A/D Line新數據以確認/否認頂背離，為本次最大資料缺口" }
+  },
+  "long_term": {
+    "buffett_indicator": { "label": "Buffett Indicator", "value": 219, "unit": "%", "as_of": "2026-03-31", "signal": "red", "riskDir": "up", "threshold": ">150%顯著高估", "note": "官方頁面仍基於3月GDP數據，已滯後逾4個月；多個即時追蹤網站顯示8月已達220%–241%不等，見data_conflicts" },
+    "shiller_cape": { "label": "Shiller CAPE / PE10", "value": 41.9, "unit": "", "as_of": "2026-08-01", "signal": "red", "riskDir": "up", "threshold": ">30歷史高檔", "note": "來源間微幅出入(41.18–42.19)，採用GuruFocus 8/1報價" },
+    "yield_curve_10y2y": { "label": "10Y-2Y Treasury Yield Curve", "value": 0.42, "unit": "%", "as_of": "2026-08-04", "signal": "green", "riskDir": "down", "threshold": "轉負為衰退警訊", "note": "另一來源標示0.45%(8/3)，差異極小" },
+    "lei": { "label": "Conference Board US LEI", "value": 99.1, "unit": "", "detail": "月增-0.2%", "as_of": "2026-06", "signal": "yellow", "riskDir": "down", "threshold": "連續下滑轉負為警訊", "note": "下次公布2026-08-20，本次搜尋確認數據未變" },
+    "aaii_allocation": { "label": "AAII 家庭股票配置比", "value": 68.3, "unit": "%", "detail": "6月71.0%→7月68.3%，連續62個月高於均值61.5%", "as_of": "2026-07", "signal": "red", "riskDir": "up", "threshold": "顯著高於均值61.5%", "note": "本次搜尋確認7月為最新一期，已非衝突而是趨勢：月減2.7個百分點但仍遠高於均值" }
+  },
+  "triggers": {
+    "vix_above_25": { "label": "VIX 突破並站穩 >25", "status": "16.15", "hit": "no", "horizon": "short" },
+    "fear_greed_drop": { "label": "Fear & Greed >75 跌回 <50", "status": "現值60，近期未見>75", "hit": "no", "horizon": "short" },
+    "margin_debt_3mo_decline": { "label": "Margin Debt 連續3個月月減", "status": "連續3個月創新高（相反）", "hit": "no", "horizon": "mid" },
+    "hy_spread_above_450": { "label": "HY Spread 擴張 >4.5%", "status": "~2.73%", "hit": "no", "horizon": "mid" },
+    "ad_line_divergence": { "label": "A/D Line 頂背離", "status": "S&P 8/4創新高，A/D Line僅有7/29數據可查、尚未確認", "hit": "warn", "horizon": "mid" },
+    "bofa_bull_bear_above_8": { "label": "BofA Bull & Bear >8.0", "status": "9.6", "hit": "yes", "horizon": "mid" },
+    "insider_below_017": { "label": "Insider Buy/Sell <0.17", "status": "0.23", "hit": "no", "horizon": "mid" }
+  },
+  "top_signal": "BofA Bull & Bear Indicator（9.6）：唯一確定觸發硬閾值的指標，本次重新查證仍維持5年新高讀數，與Margin Debt年增49%、CAPE 41.9、Buffett Indicator同步發出過熱訊號；同時S&P 500於8/4創7,737新高但A/D Line缺乏同期數據確認，為本次掃描最需留意的資料缺口。",
+  "data_conflicts": [
+    "AAII 散戶情緒調查：三組讀數互相矛盾（Bullish 37.0%(8/6) vs 31.0%/Bearish 42.1%(8/4) vs 更早的29.6%/42.3%），請至 aaii.com/sentimentsurvey 核實",
+    "CBOE Equity Put/Call Ratio：0.55(8/3) 與 1.11(8/4，Convex來源) 差距過大，疑似指標定義不同（equity-only vs total put/call），本次未採用單一數字",
+    "FINRA Margin Debt：本次GuruFocus查得$1.50兆／年增49.02%，與稍早流傳的$1.53兆／年增51.5%不同，可能為四捨五入或資料版本差異",
+    "ICE BofA HY OAS利差：來源間273bps(8/4)–287bps(7月)不等，另有一則報導稱「372bps創2023年12月以來新高」與其餘來源明顯不符，判斷為過時或錯誤引用，未採用",
+    "NYSE A/D Line：最新可得數據仍停留在7/29，S&P 500已於8/4創7,737新高，但未查得8月的A/D Line更新數值以確認或排除頂背離",
+    "Buffett Indicator：官方currentmarketvaluation.com頁面仍基於3/31 GDP數據顯示219%，但多個即時追蹤網站顯示8月已達220%–241%不等，官方數據滯後程度可能被低估",
+    "NAAIM Exposure Index：2026-08-01起轉訂閱制，本次搜尋仍僅能取得7/29免費資料",
+    "Insider Buy/Sell Ratio：滯後至2026-07月度數據",
+    "Conference Board LEI：滯後至2026-06月度數據，下次公布2026-08-20",
+    "Shiller CAPE：來源間微幅出入(41.18–42.19)，採用GuruFocus 8/1報價41.9"
+  ]
+}
