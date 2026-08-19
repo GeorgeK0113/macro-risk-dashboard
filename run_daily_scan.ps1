@@ -1,11 +1,37 @@
 ﻿$ErrorActionPreference = "Continue"
 
 # PowerShell 5.1 的 *> 重導向預設寫 UTF-16LE，會讓 log 中文變亂碼、grep 也抓不到。
-# 這行讓所有重導向改用 UTF-8（>、>>、*> 內部都是走 Out-File）。
 $PSDefaultParameterValues['Out-File:Encoding'] = 'utf8'
+
+# 這個是另一件事：控制 PowerShell「讀取外部程式 stdout」時要用什麼編碼解讀位元組。
+# claude.exe 本身輸出 UTF-8，但沒設這個的話 PowerShell 會用系統主控台編碼（此機器是 Big5/950）
+# 去解讀，解讀錯了之後才轉存成 UTF-8——結果檔案格式正確，內容卻是亂碼。
+try { $OutputEncoding = [System.Text.UTF8Encoding]::new() } catch {}
+try { [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new() } catch {}
 
 $dir = "C:\Users\George\Desktop\CLAUDE other\宏觀風險掃描"
 Set-Location $dir
+
+$today = Get-Date -Format "yyyy-MM-dd"
+$historyFile = Join-Path $dir "logs\run_history.log"
+
+# ---------------------------------------------------------------------------
+# 0. 今天是否已經成功跑過：這支腳本同時被兩個時間點的排程觸發（09:25 主跑、
+#    13:30 補跑），13:30 那個原意只是「萬一早上沒開機才補跑」，但先前沒做
+#    這個檢查，變成每天下午都無條件重跑一次完整掃描，重複消耗當天的
+#    Claude 額度，導致下午幾乎每次都因為撞到 session 額度上限而失敗，
+#    在桌面留下「掃描失敗」的假警報——即使早上其實已經成功。
+#    這裡先檢查 run_history.log 裡今天是不是已經有 status=OK，有的話直接
+#    結束，不要再跑。
+# ---------------------------------------------------------------------------
+if (Test-Path $historyFile) {
+    $alreadyOk = Get-Content $historyFile -Encoding utf8 -ErrorAction SilentlyContinue |
+        Where-Object { $_ -match "^$([regex]::Escape($today))_.*status=OK" }
+    if ($alreadyOk) {
+        # 靜默成功結束，不寫警示、不佔用額度。想看紀錄就翻 run_history.log。
+        exit 0
+    }
+}
 
 $claude = (Get-Command claude -ErrorAction SilentlyContinue).Source
 if (-not $claude) {
@@ -14,9 +40,7 @@ if (-not $claude) {
 
 $startTime = Get-Date
 $stamp = Get-Date -Format "yyyy-MM-dd_HHmm"
-$today = Get-Date -Format "yyyy-MM-dd"
 $logFile = Join-Path $dir "logs\$stamp.log"
-$historyFile = Join-Path $dir "logs\run_history.log"
 $alertFile = Join-Path ([Environment]::GetFolderPath("Desktop")) "⚠️宏觀掃描失敗.txt"
 
 function Write-History($status, $publish, $exitCode) {
@@ -28,13 +52,19 @@ function Write-Log($text) {
     Add-Content -Path $logFile -Encoding utf8 -Value $text
 }
 
-# 連續失敗時在桌面留下一個看得到的檔案；成功就把它刪掉。
+# 外部命令（claude / git）的輸出一律用這個方式擷取：2>&1 合併串流成純文字陣列，
+# 而不是用 *>> 直接導向檔案。後者在這台機器上會把 git 正常寫到 stderr 的進度訊息
+# （例如 push 成功時的提示）包裝成看起來像致命錯誤的 NativeCommandError 格式，
+# 即使該次操作其實成功，log 內容也會讓人誤判為失敗。用 2>&1 擷取成文字，
+# 只靠 $LASTEXITCODE 判斷成敗，log 裡就只有純文字。
+function Invoke-Logged($exePath, $exeArgs) {
+    $output = & $exePath @exeArgs 2>&1 | ForEach-Object { $_.ToString() }
+    $text = $output -join "`n"
+    Write-Log $text
+    return @{ Text = $text; ExitCode = $LASTEXITCODE }
+}
+
 function Raise-Alert($reason, $howToFix) {
-    $recent = @()
-    if (Test-Path $historyFile) {
-        $recent = @(Get-Content $historyFile -Encoding utf8 -ErrorAction SilentlyContinue |
-                    Select-Object -Last 5 | Where-Object { $_ -match "status=FAILED" })
-    }
     $body = @"
 宏觀風險掃描失敗
 
@@ -65,19 +95,12 @@ function Clear-Alert {
 }
 
 # ---------------------------------------------------------------------------
-# 0. 登入預檢：憑證過期是最常見的失效原因，先驗明正身再跑，
-#    否則 log 只會留下一堆「檔案未產生」，看不出真正病因。
+# 1. 登入預檢
 # ---------------------------------------------------------------------------
-$authOut = ""
-try {
-    $authOut = (& $claude auth status 2>&1 | Out-String)
-} catch {
-    $authOut = "auth status 執行失敗：$($_.Exception.Message)"
-}
-Write-Log "=== auth precheck ===`n$authOut"
+$authResult = Invoke-Logged $claude @("auth", "status")
+Write-Log "=== auth precheck ===`n$($authResult.Text)"
 
-if ($authOut -notmatch '"loggedIn"\s*:\s*true') {
-    Write-Log "登入預檢未通過，本次不執行掃描。"
+if ($authResult.Text -notmatch '"loggedIn"\s*:\s*true') {
     Write-History "FAILED(AUTH_EXPIRED)" "SKIPPED" 1
     Raise-Alert "Claude CLI 登入已過期，掃描無法執行。" @"
 1. 打開一個新的終端機（PowerShell 或 CMD）
@@ -90,7 +113,11 @@ if ($authOut -notmatch '"loggedIn"\s*:\s*true') {
 }
 
 # ---------------------------------------------------------------------------
-# 1. 執行掃描（失敗時重試一次；認證類錯誤不重試，重試也沒用）
+# 2. 執行掃描
+#    - 一般失敗（例如單次網路問題）重試一次
+#    - 額度限制（session limit）重試沒有意義，因為通常要 20-50 分鐘後才重置，
+#      遠超過原本 120 秒的重試等待，直接標記為獨立的狀態、不重試、不用嚇人
+#      的措辭發警示（這不是故障，是額度用完，等下次排程自然會恢復）
 # ---------------------------------------------------------------------------
 $prompt = "請讀取並嚴格依照 daily_scan_instructions.md 的規格，執行今天（實際系統日期）的宏觀風險掃描，把結果寫入 data/、reports/ 與 dashboard.html。注意該檔案第零條規則：一律重新抓取全部17項指標，禁止因為當天檔案已存在或資料看起來很新就跳過。"
 
@@ -119,21 +146,24 @@ $attempt = 0
 $maxAttempts = 2
 $exitCode = 1
 $stale = @("(未執行)")
+$sessionLimited = $false
 
 while ($attempt -lt $maxAttempts) {
     $attempt++
     Write-Log "=== scan attempt $attempt / $maxAttempts  ($(Get-Date -Format 'HH:mm:ss')) ==="
-    & $claude @claudeArgs *>> $logFile
-    $exitCode = $LASTEXITCODE
+    $scanResult = Invoke-Logged $claude $claudeArgs
+    $exitCode = $scanResult.ExitCode
+
+    if ($scanResult.Text -match "session limit|usage limit|rate limit") {
+        $sessionLimited = $true
+        Write-Log "偵測到額度限制，不再重試（重試也要等到額度重置才有用）。"
+        break
+    }
 
     $stale = Test-FilesUpdated
     if ($stale.Count -eq 0) { break }
 
-    $tail = ""
-    if (Test-Path $logFile) {
-        $tail = (Get-Content $logFile -Encoding utf8 -Tail 20 -ErrorAction SilentlyContinue) -join "`n"
-    }
-    if ($tail -match "OAuth|authenticate|login|credential") {
+    if ($scanResult.Text -match "OAuth|authenticate|credential") {
         Write-Log "偵測到認證類錯誤，不再重試。"
         Write-History "FAILED(AUTH_EXPIRED)" "SKIPPED" $exitCode
         Raise-Alert "Claude CLI 認證失效，掃描中止。" @"
@@ -149,33 +179,51 @@ while ($attempt -lt $maxAttempts) {
     }
 }
 
+if ($sessionLimited) {
+    Write-History "FAILED(SESSION_LIMIT)" "SKIPPED" $exitCode
+    Raise-Alert "今天的 Claude 使用額度已用完，暫時無法掃描（非故障）。" @"
+這不是需要你處理的錯誤，額度會在稍後自動重置。
+下次排程觸發時會自動重新嘗試，通常不需要手動介入。
+如果想現在立刻補跑：
+   powershell -ExecutionPolicy Bypass -File "$dir\run_daily_scan.ps1"
+"@
+    exit 1
+}
+
 if ($stale.Count -eq 0) { $status = "OK" } else { $status = "FAILED(" + ($stale -join ",") + ")" }
 
 # ---------------------------------------------------------------------------
-# 2. 發布：只有確認檔案真的更新過才推，避免把舊資料重推一次假裝有更新
+# 3. 發布：只有確認檔案真的更新過才推
 # ---------------------------------------------------------------------------
 $publish = "SKIPPED"
 if ($status -eq "OK") {
     try {
         $py = "C:\Users\George\AppData\Local\Programs\Python\Python311\python.exe"
         if (-not (Test-Path $py)) { $py = "python" }
-        & $py (Join-Path $dir "build_shared_page.py") *>> $logFile
-        if ($LASTEXITCODE -ne 0) { throw "build_shared_page.py 失敗 (exit $LASTEXITCODE)" }
+        $buildResult = Invoke-Logged $py @((Join-Path $dir "build_shared_page.py"))
+        if ($buildResult.ExitCode -ne 0) { throw "build_shared_page.py 失敗 (exit $($buildResult.ExitCode))" }
 
         $wt = Join-Path $dir ".worktree-gh-pages"
         if (-not (Test-Path (Join-Path $wt "index.html"))) { throw "index.html 未產生" }
 
         Push-Location $wt
         try {
-            git add index.html *>> $logFile
-            $dirty = git status --porcelain
+            $env:GIT_TERMINAL_PROMPT = "0"
+
+            Invoke-Logged "git" @("add", "index.html") | Out-Null
+            $dirty = & git status --porcelain
             if ([string]::IsNullOrWhiteSpace($dirty)) {
                 $publish = "NO_CHANGE"
             } else {
-                git -c user.name="GeorgeK0113" -c user.email="okwong0113@gmail.com" commit --amend -q -m "Dashboard update $($today -replace '-','')" *>> $logFile
-                $env:GIT_TERMINAL_PROMPT = "0"   # 憑證有問題時要立刻失敗，不可卡在互動提示
-                git push -f origin gh-pages *>> $logFile
-                if ($LASTEXITCODE -ne 0) { throw "git push 失敗 (exit $LASTEXITCODE)" }
+                $commitResult = Invoke-Logged "git" @(
+                    "-c", "user.name=GeorgeK0113",
+                    "-c", "user.email=okwong0113@gmail.com",
+                    "commit", "--amend", "-q", "-m", "Dashboard update $($today -replace '-','')"
+                )
+                if ($commitResult.ExitCode -ne 0) { throw "git commit 失敗 (exit $($commitResult.ExitCode))" }
+
+                $pushResult = Invoke-Logged "git" @("push", "-f", "origin", "gh-pages")
+                if ($pushResult.ExitCode -ne 0) { throw "git push 失敗 (exit $($pushResult.ExitCode))" }
                 $publish = "PUSHED"
             }
         } finally {
